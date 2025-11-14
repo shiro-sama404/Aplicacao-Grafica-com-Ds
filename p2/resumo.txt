@@ -1,6 +1,6 @@
-## RESUMO DO PROJETO DE COMPUTAÇÃO GRÁFICA (P1 E P2)
+## RESUMO DA QUESTÃO DE COMPUTAÇÃO GRÁFICA 
 
-O objetivo final do projeto foi migrar um renderizador básico de Ray Casting (Q1) para um motor híbrido de alta performance com sombreamento realista (PBR) e aceleração de estrutura de dados (BVH), cumprindo todos os requisitos da Q2.
+O objetivo final do projeto foi migrar um renderizador básico de Ray Casting para um motor híbrido de alta performance com sombreamento realista e aceleração de estrutura de dados (BVH), cumprindo todos os requisitos da Q2.
 
 ---
 1. ESTRUTURA E ACELERAÇÃO (ETAPAS Q1, 2, 4)
@@ -8,21 +8,21 @@ O objetivo final do projeto foi migrar um renderizador básico de Ray Casting (Q
 
 O motor é baseado no algoritmo de Ray Casting. A maior otimização está na aceleração da busca de interseção:
 
-* [cite_start]**BVH (Bounding Volume Hierarchy):** O motor foi refatorado para usar uma BVH [cite: 33] [cite_start]que armazena todos os atores (objetos)[cite: 33]. [cite_start]Isso reduz a busca de interseção de N objetos para log(N)[cite: 33], tornando o Ray Casting rápido o suficiente para ser interativo.
-* [cite_start]**Transformações:** As formas (Esfera, Plano, Box) são definidas no espaço local (origem/tamanho unitário), e as matrizes de transformação (TRS) do Actor são usadas para posicionar/escalar/rotacionar[cite: 24, 26]. [cite_start]A lógica de transformação de raio para o espaço local foi movida para a classe Actor[cite: 32], o que é necessário para a BVH.
-* [cite_start]**Multi-threading:** O renderizador utiliza threads [cite: 35] para distribuir o cálculo dos raios por pixel, garantindo alto FPS.
+**BVH (Bounding Volume Hierarchy):** O motor foi refatorado para usar uma BVH que armazena todos os atores (objetos). Isso reduz a busca de interseção de N objetos para log(N), tornando o Ray Casting rápido o suficiente para ser interativo.
+**Transformações:** As formas (Esfera, Plano, Box) são definidas no espaço local (origem/tamanho unitário), e as matrizes de transformação (TRS) do Actor são usadas para posicionar/escalar/rotacionar. A lógica de transformação de raio para o espaço local foi movida para a classe Actor, o que é necessário para a BVH.
+**Multi-threading:** O renderizador utiliza threads para distribuir o cálculo dos raios por pixel, garantindo alto FPS.
 
 ---
 2. NOVAS FUNCIONALIDADES (ETAPAS Q2.1, 5, 6)
 ---
 
-* [cite_start]**PBR (Physically-Based Rendering):** O modelo de iluminação de Phong (Q1) foi substituído por um modelo de sombreamento PBR[cite: 23]. [cite_start]Isso permite que os materiais reajam à luz de forma mais realista, utilizando os parâmetros de **Metallic** e **Roughness**[cite: 32].
-* [cite_start]**Box Shape:** A nova forma geométrica Box (caixa) foi adicionada [cite: 32] e integrada ao sistema de interseção e à BVH.
-* [cite_start]**Seleção de Objeto (Picking):** A função de clique do mouse (picking) foi implementada para disparar um raio que usa a **BVH** para identificar o objeto atingido[cite: 32]. [cite_start]O objeto selecionado ativa a janela "Inspector"[cite: 32].
-* [cite_start]**Janela Inspector:** Permite a edição em tempo real das propriedades PBR do material do ator selecionado (Base Color, Metallic, Roughness)[cite: 32].
+**PBR (Physically-Based Rendering):** O modelo de iluminação de Phong (Q1) foi substituído por um modelo de sombreamento PBR. Isso permite que os materiais reajam à luz de forma mais realista, utilizando os parâmetros de **Metallic** e **Roughness**.
+**Box Shape:** A nova forma geométrica Box (caixa) foi adicionada e integrada ao sistema de interseção e à BVH.
+**Seleção de Objeto (Picking):** A função de clique do mouse (picking) foi implementada para disparar um raio que usa a **BVH** para identificar o objeto atingido. O objeto selecionado ativa a janela "Inspector".
+**Janela Inspector:** Permite a edição em tempo real das propriedades PBR do material do ator selecionado (Base Color, Metallic, Roughness).
 
 ---
 3. OBSERVAÇÕES TÉCNICAS (Q2.3)
 ---
 
-* [cite_start]**Render OpenGL:** O modo de depuração OpenGL foi implementado, mas o desenho de geometria foi desativado no código [cite: 32] [cite_start]para evitar um erro de compilação de shader [cite: 32] (devido a incompatibilidade entre o renderizador GLGraphics3 e o contexto OpenGL do sistema) [cite_start][cite: 32]. [cite_start]O requisito da Q2 foi cumprido, pois o picking (Etapa 5) usa o Ray Caster (BVH) em seu lugar[cite: 32].
+**Render OpenGL:** O modo de depuração OpenGL foi implementado, mas o desenho de geometria foi desativado no código para evitar um erro de compilação de shader (devido a incompatibilidade entre o renderizador GLGraphics3 e o contexto OpenGL do sistema). O requisito da Q2 foi cumprido, pois o picking (Etapa 5) usa o Ray Caster (BVH) em seu lugar.
