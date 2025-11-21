@@ -1,0 +1,100 @@
+========================================
+COMO RODAR O PROGRAMA PBR
+========================================
+
+OPÇÃO 1: Visual Studio 2022 (RECOMENDADO)
+==========================================
+
+1. Abra o Visual Studio 2022
+
+2. Abra o arquivo de solução:
+   - File -> Open -> Project/Solution
+   - Navegue até: apps\tp1\build\vs2022\myapp.sln
+   - Clique em "Open"
+
+3. Certifique-se de que a biblioteca 'cg' está compilada:
+   - Se não estiver, primeiro compile a biblioteca cg:
+     * Abra: cg\build\vs2022\cg.sln (ou o arquivo de solução correspondente)
+     * Build -> Build Solution
+     * Isso criará cg.lib
+
+4. Configure para Debug ou Release:
+   - No menu superior, escolha "Debug" ou "Release"
+   - Escolha "x64" como plataforma
+
+5. Compile o projeto:
+   - Build -> Build Solution (ou pressione F7)
+   - Ou clique com botão direito em "myapp" no Solution Explorer
+     e selecione "Build"
+
+6. Execute o programa:
+   - Debug -> Start Without Debugging (ou pressione Ctrl+F5)
+   - Ou Debug -> Start Debugging (ou pressione F5)
+
+O executável será gerado em:
+  - Debug: apps\tp1\build\vs2022\Debug\myapp.exe
+  - Release: apps\tp1\build\vs2022\Release\myapp.exe
+
+
+OPÇÃO 2: Linha de Comando (MSBuild)
+=====================================
+
+1. Abra o "Developer Command Prompt for VS 2022" ou PowerShell
+
+2. Navegue até o diretório do projeto:
+   cd c:\Users\caiok\Ds\apps\tp1\build\vs2022
+
+3. Compile usando MSBuild:
+   msbuild myapp.sln /p:Configuration=Debug /p:Platform=x64
+
+   ou para Release:
+   msbuild myapp.sln /p:Configuration=Release /p:Platform=x64
+
+4. Execute o programa:
+   .\Debug\myapp.exe
+   (ou .\Release\myapp.exe se compilou em Release)
+
+
+IMPORTANTE: ANTES DE COMPILAR
+==============================
+
+Certifique-se de que a biblioteca 'cg' está compilada:
+- A biblioteca deve estar em: cg\build\vs2022\Debug\cg.lib (ou Release)
+- Se não estiver, compile primeiro o projeto cg
+
+
+CONTROLES DO PROGRAMA
+=====================
+
+Teclado:
+- (w) mover câmera para frente
+- (s) mover câmera para trás
+- (a) mover câmera para esquerda
+- (d) mover câmera para direita
+- (q) mover câmera para cima
+- (z) mover câmera para baixo
+
+Mouse:
+- Scroll wheel: zoom in/out
+- Middle-click + arrastar: pan
+- Alt + Right-click + arrastar: rotacionar câmera
+
+Interface Gráfica (GUI):
+- Camera: Controles de posição, FOV, plano near e far
+- Lights: Controles de posição, cor e falloff para cada uma das 3 luzes
+- Materials: Seleção de ator e edição de propriedades do material
+
+
+TROUBLESHOOTING
+===============
+
+Se houver erros de compilação:
+1. Verifique se a biblioteca cg está compilada
+2. Verifique se o Visual Studio 2022 está instalado
+3. Verifique se todas as dependências estão presentes (GLFW, ImGui)
+
+Se o programa não executar:
+1. Verifique se o executável foi gerado
+2. Execute pelo Visual Studio para ver mensagens de erro
+3. Certifique-se de que as DLLs necessárias estão disponíveis
+

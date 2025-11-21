@@ -1,0 +1,75 @@
+PBR Application - Physically Based Rendering
+
+Autor: [Nome do autor]
+
+DESCRIÇÃO
+=========
+Esta aplicação implementa um modelo simplificado de renderização baseada em física (PBR - Physically Based Rendering) usando OpenGL. O modelo utiliza a equação de refletância com BRDF (Bidirectional Reflectance Distribution Function) que combina componentes difusa e especular.
+
+A cena contém 12 esferas (atores):
+- 6 esferas na linha superior com materiais dielétricos (diferentes cores e rugosidades)
+- 6 esferas na linha inferior com materiais metálicos (Cobre, Alumínio, Prata, Titânio, Ouro)
+
+A aplicação possui 3 luzes pontuais que podem ser controladas através da interface gráfica.
+
+COMPILAÇÃO
+==========
+Se estiver usando Visual Studio 2022:
+- Abra o arquivo apps/tp1/build/vs2022/myapp.sln
+- Compile o projeto (Build -> Build Solution)
+
+Se estiver usando CMake no Linux:
+- No diretório raiz do projeto (Ds), execute:
+  mkdir build && cd build
+  cmake ..
+  make
+  
+- O executável será gerado em apps/tp1/
+
+EXECUÇÃO
+========
+- Windows: Execute apps/tp1/myapp.exe ou apps/tp1/build/vs2022/Debug/myapp.exe
+- Linux: Execute apps/tp1/myapp
+
+A aplicação não requer argumentos de linha de comando. Execute a partir de qualquer diretório.
+
+CONTROLES
+=========
+Teclado:
+- (w) mover câmera para frente
+- (s) mover câmera para trás
+- (a) mover câmera para esquerda
+- (d) mover câmera para direita
+- (q) mover câmera para cima
+- (z) mover câmera para baixo
+
+Mouse:
+- Scroll wheel: zoom in/out
+- Middle-click + arrastar: pan
+- Alt + Right-click + arrastar: rotacionar câmera
+
+Interface Gráfica (GUI):
+- Camera: Controles de posição, FOV, plano near e far
+- Lights: Controles de posição, cor e falloff para cada uma das 3 luzes
+- Materials: Seleção de ator e edição de propriedades do material (Od, Os, Roughness, Metallic)
+
+IMPLEMENTAÇÃO
+=============
+Shaders:
+- Vertex Shader: Transforma vértices para espaço de câmera e passa posição e normal
+- Fragment Shader: Calcula iluminação PBR usando:
+  * BRDF Difusa: fd = Od / π
+  * BRDF Especular: fs = (F * G * D) / (4 * (N·L) * (N·V))
+  * Fresnel (Schlick): F = F0 + (1 - F0) * (1 - (L·H))^5
+  * Geometry (Smith): G = G1(L) * G1(V), onde G1(*) = (N·*) / ((N·*)(1-κ) + κ)
+  * Distribution (GGX/Trowbridge-Reitz): D = α² / (π * [(N·H)²(α²-1) + 1]²)
+
+Parâmetros do Material:
+- Od: Cor de reflexão difusa (RGB)
+- Os: Cor de reflexão especular (RGB) - F0 no modelo de Fresnel
+- r: Rugosidade (0 = perfeitamente liso, 1 = muito áspero)
+- m: Metálico (0 = dielétrico, 1 = metal)
+
+Nota: Para materiais 100% metálicos, Od = (0,0,0) pois metais não têm reflexão difusa.
+Para materiais dielétricos, Os tem valor mínimo de aproximadamente 0.04.
+
