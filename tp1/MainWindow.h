@@ -1,149 +1,77 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2022 Paulo Pagliosa.                              |
+//| MainWindow.h                                                |
 //|                                                                 |
-//| This software is provided 'as-is', without any express or       |
-//| implied warranty. In no event will the authors be held liable   |
-//| for any damages arising from the use of this software.          |
-//|                                                                 |
-//| Permission is granted to anyone to use this software for any    |
-//| purpose, including commercial applications, and to alter it and |
-//| redistribute it freely, subject to the following restrictions:  |
-//|                                                                 |
-//| 1. The origin of this software must not be misrepresented; you  |
-//| must not claim that you wrote the original software. If you use |
-//| this software in a product, an acknowledgment in the product    |
-//| documentation would be appreciated but is not required.         |
-//|                                                                 |
-//| 2. Altered source versions must be plainly marked as such, and  |
-//| must not be misrepresented as being the original software.      |
-//|                                                                 |
-//| 3. This notice may not be removed or altered from any source    |
-//| distribution.                                                   |
+//| Main graphics window for TP1                                   |
 //|                                                                 |
 //[]---------------------------------------------------------------[]
-//
-// OVERVIEW: MainWindow.h
-// ========
-// Class definition for PBR application window.
-//
-// Author: Paulo Pagliosa
-// Last revision: 20/11/2025
 
-#ifndef __MainWindow_h
-#define __MainWindow_h
+#pragma once
 
 #include "graphics/GLRenderWindow3.h"
-#include "graphics/GLProgram.h"
-#include "graphics/GLMesh.h"
-#include "geometry/TriangleMesh.h"
-#include "geometry/MeshSweeper.h"
-#include "math/Vector3.h"
-#include <vector>
+#include "PBRRenderer.h"
+#include "SceneBuilder.h"
+#include "GUIInitializer.h"
 
-using namespace cg;
+namespace cg { class GUIInitializer; }
 
-/////////////////////////////////////////////////////////////////////
-//
-// Material structure for PBR
-//
-struct PBRMaterial
-{
-  vec3f Od;  // Diffuse color
-  vec3f Os;  // Specular color (F0)
-  float r;   // Roughness (0-1)
-  float m;   // Metallic (0-1)
-  
-  PBRMaterial(const vec3f& od, const vec3f& os, float roughness, float metallic)
-    : Od{od}, Os{os}, r{roughness}, m{metallic}
-  {
-  }
-};
+namespace cg
+{ // begin namespace cg
 
-/////////////////////////////////////////////////////////////////////
 //
-// Point Light structure
+// MainWindow: janela gráfica principal
 //
-struct PointLight
-{
-  vec3f position;
-  vec3f color;
-  float falloff;
-  
-  PointLight(const vec3f& pos, const vec3f& col, float fo = 1.0f)
-    : position{pos}, color{col}, falloff{fo}
-  {
-  }
-};
-
-/////////////////////////////////////////////////////////////////////
-//
-// Actor structure (sphere)
-//
-struct Actor
-{
-  vec3f position;
-  PBRMaterial material;
-  const TriangleMesh* mesh;
-  
-  Actor(const vec3f& pos, const PBRMaterial& mat, const TriangleMesh* m)
-    : position{pos}, material{mat}, mesh{m}
-  {
-  }
-};
-
-
-/////////////////////////////////////////////////////////////////////
-//
-// MainWindow: PBR main window class
-// ==========
-class MainWindow final: public GLRenderWindow3
+class MainWindow: public GLRenderWindow3
 {
 public:
-  MainWindow(int width, int height);
+  MainWindow(int width, int height):
+    GLRenderWindow3{"TP1 - PBR Renderer", width, height},
+    _scene{nullptr},
+    _renderer{nullptr},
+    _gui{nullptr} 
+  {
+    // Instancia a GUI passando a própria janela como referência
+    _gui = new GUIInitializer(*this);
+  }
+
+  ~MainWindow()
+  {
+    delete _gui;
+    delete _renderer;
+    delete _scene;
+  }
+
+  bool windowResizeEvent(int width, int height) override;
+
+  bool keyInputEvent(int, int, int) override;
+  bool mouseButtonInputEvent(int button, int action, int mods) override;
+  bool mouseMoveEvent(double xPos, double yPos) override;
+  bool scrollEvent(double xoffset, double yoffset) override;
+
+  Camera* camera() { return _renderer ? _renderer->camera() : nullptr; }
+  Scene* scene() { return _scene; }
+  void resetScene();
+
+protected:
+  // Inicialização OpenGL
+  void initialize() override;
+  // Renderização da cena
+  void render() override;
+  // Interface gráfica (ImGui)
+  void gui() override;
+  // Finalização OpenGL
+  void terminate() override;
 
 private:
-  using Base = GLRenderWindow3;
+  Scene* _scene;
+  PBRRenderer* _renderer;
+  GUIInitializer* _gui;
 
-  // PBR Shader Program
-  GLSL::Program _pbrProgram{"PBR Program"};
-  GLint _mvMatrixLoc;
-  GLint _normalMatrixLoc;
-  GLint _mvpMatrixLoc;
-  GLint _materialOdLoc;
-  GLint _materialOsLoc;
-  GLint _materialRoughnessLoc;
-  GLint _materialMetallicLoc;
-  GLint _lightPositionsLoc;
-  GLint _lightColorsLoc;
-  GLint _lightFalloffsLoc[3];
-  GLint _lightCountLoc;
-  
-  // Scene data
-  Reference<TriangleMesh> _sphereMesh;
-  std::vector<Actor> _actors;
-  std::vector<PointLight> _lights;
-  int _selectedActor{0};
-  
-  // Camera controls
-  vec3f _cameraPos;
-  float _cameraFOV{45.0f};
-  float _cameraNear{0.1f};
-  float _cameraFar{100.0f};
-  
-  // Overridden methods
-  void initialize() override;
-  void renderScene() override;
-  void gui() override;
-  
-  // Helper methods
-  void initializeShaders();
-  void initializeScene();
-  void renderActor(const Actor& actor);
-  void updateCameraProjection();
-  
-  static constexpr int NL = 3; // Number of lights
-  
+  bool _isMinimized = false;
+  bool _isDragging = false;
+  int _dragButton = -1;
+  double _lastX = 0.0;
+  double _lastY = 0.0;
 }; // MainWindow
 
-#endif // __MainWindow_h
+} // end namespace cg

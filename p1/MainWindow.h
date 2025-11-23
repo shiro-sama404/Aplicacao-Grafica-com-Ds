@@ -23,7 +23,7 @@ private:
     cg::Color _planeColor;
     bool _enableRayCasting;
 
-    // --- Ponteiros de Material (para atualização via GUI) ---
+    // --- Ponteiros de Material (para atualizaï¿½ï¿½o via GUI) ---
     cg::Material* _sphereMatA;
     cg::Material* _sphereMatS;
     cg::Material* _sphereMatSh;
@@ -34,7 +34,7 @@ private:
     Reference<GLImage> _image;
     Reference<Camera> _camera;
 
-    // --- Métodos Sobrescritos do GLRenderWindow3 ---
+    // --- Mï¿½todos Sobrescritos do GLRenderWindow3 ---
     void initialize() override;
     void update() override;
     void renderScene() override;
@@ -44,7 +44,7 @@ private:
     bool mouseMoveEvent(double xPos, double yPos) override;
     void gui() override;
 
-    // --- Métodos de Lógica Interna ---
+    // --- Mï¿½todos de Lï¿½gica Interna ---
 
     void rayCasting();
     void createScene();

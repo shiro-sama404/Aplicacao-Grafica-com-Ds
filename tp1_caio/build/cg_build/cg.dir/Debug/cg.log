@@ -1,0 +1,66 @@
+﻿  Building Custom Rule E:/Desk/UF/Disciplinas/Computação Gráfica/Ds Testes/cg/CMakeLists.txt
+  imgui_draw.cpp
+  imgui_impl_glfw.cpp
+  imgui_impl_opengl3.cpp
+  imgui_tables.cpp
+  imgui_widgets.cpp
+  imgui.cpp
+  BlockAllocator.cpp
+  Exception.cpp
+  NameableObject.cpp
+  AnimatedAlgorithm.cpp
+  BVH.cpp
+  MeshSweeper.cpp
+  TriangleMesh.cpp
+  TriangleMeshBVH.cpp
+  CameraProxy.cpp
+  Component.cpp
+  LightProxy.cpp
+  PrimitiveProxy.cpp
+  SceneObject.cpp
+  SceneObjectBuilder.cpp
+  Gerando Código...
+  Compilando...
+  SceneWindow.cpp
+  Transform.cpp
+  Application.cpp
+  Assets.cpp
+  AssetFolder.cpp
+  Camera.cpp
+  Color.cpp
+  GLFramebuffer.cpp
+  GLGraphics2.cpp
+  GLGraphics3.cpp
+  GLGraphicsBase.cpp
+  GLImage.cpp
+  GLLines3.cpp
+  GLLines3Renderer.cpp
+  GLMesh.cpp
+  GLMeshRenderer.cpp
+  GLPoints3.cpp
+  GLPoints3Renderer.cpp
+  GLProgram.cpp
+  GLRenderer.cpp
+  Gerando Código...
+  Compilando...
+  GLRendererBase.cpp
+  GLRenderWindow2.cpp
+  GLRenderWindow3.cpp
+  GLTextureFramebuffer.cpp
+  GLWindow.cpp
+  Image.cpp
+  Light.cpp
+  Primitive.cpp
+  PrimitiveBVH.cpp
+  PrimitiveMapper.cpp
+  Renderer.cpp
+  SceneEditor.cpp
+  SceneWindowBase.cpp
+  Shape.cpp
+  TransformableObject.cpp
+  TriangleMeshMapper.cpp
+  TriangleMeshShape.cpp
+  MeshReader.cpp
+  MeshWriter.cpp
+  Gerando Código...
+  cg.vcxproj -> E:\Desk\UF\Disciplinas\Computação Gráfica\Ds Testes\apps\Aplicacao-Grafica-com-Ds\tp1\build\cg_build\Debug\cg.lib
