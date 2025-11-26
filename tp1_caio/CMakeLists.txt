@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_executable(myapp
   Main.cpp
   MainWindow.cpp
+  Box.cpp
 )
 
 target_link_libraries(myapp cg)

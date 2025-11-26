@@ -73,3 +73,4 @@ Parâmetros do Material:
 Nota: Para materiais 100% metálicos, Od = (0,0,0) pois metais não têm reflexão difusa.
 Para materiais dielétricos, Os tem valor mínimo de aproximadamente 0.04.
 
+

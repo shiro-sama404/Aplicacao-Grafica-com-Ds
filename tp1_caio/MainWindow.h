@@ -38,8 +38,14 @@
 #include "graphics/GLMesh.h"
 #include "geometry/TriangleMesh.h"
 #include "geometry/MeshSweeper.h"
+#include "geometry/BVH.h"
+#include "geometry/Ray.h"
+#include "geometry/Intersection.h"
+#include "graphics/Shape.h"
 #include "math/Vector3.h"
+#include "Box.h"
 #include <vector>
+#include <memory>
 
 using namespace cg;
 
@@ -78,16 +84,20 @@ struct PointLight
 
 /////////////////////////////////////////////////////////////////////
 //
-// Actor structure (sphere)
+// Actor structure (can be sphere or box)
 //
 struct Actor
 {
+  enum Type { Sphere, Box };
+  
   vec3f position;
   PBRMaterial material;
-  const TriangleMesh* mesh;
+  const TriangleMesh* mesh;  // For OpenGL rendering
+  Reference<Shape> shape;     // For ray casting
+  Type type;
   
-  Actor(const vec3f& pos, const PBRMaterial& mat, const TriangleMesh* m)
-    : position{pos}, material{mat}, mesh{m}
+  Actor(const vec3f& pos, const PBRMaterial& mat, const TriangleMesh* m, Shape* s, Type t)
+    : position{pos}, material{mat}, mesh{m}, shape{s}, type{t}
   {
   }
 };
@@ -121,9 +131,16 @@ private:
   
   // Scene data
   Reference<TriangleMesh> _sphereMesh;
+  Reference<TriangleMesh> _boxMesh;
   std::vector<Actor> _actors;
   std::vector<PointLight> _lights;
-  int _selectedActor{0};
+  int _selectedActor{-1};
+  bool _showInspectionWindow{false};
+  
+  // Ray casting and BVH
+  Reference<BVH<Shape>> _bvh;
+  bool _useRayCasting{false};
+  bool _useBVH{true};
   
   // Camera controls
   vec3f _cameraPos;
@@ -135,14 +152,22 @@ private:
   void initialize() override;
   void renderScene() override;
   void gui() override;
+  bool onMouseLeftPress(int x, int y) override;
   
   // Helper methods
   void initializeShaders();
   void initializeScene();
   void renderActor(const Actor& actor);
   void updateCameraProjection();
+  void buildBVH();
+  
+  // Ray casting methods
+  Ray3f makeRayFromPixel(int x, int y) const;
+  vec3f shadePBR(const Ray3f& ray, const Intersection& hit, int recursionLevel = 0) const;
+  bool intersectScene(const Ray3f& ray, Intersection& hit) const;
   
   static constexpr int NL = 3; // Number of lights
+  static constexpr float RT_EPS = 1e-4f;
   
 }; // MainWindow
 

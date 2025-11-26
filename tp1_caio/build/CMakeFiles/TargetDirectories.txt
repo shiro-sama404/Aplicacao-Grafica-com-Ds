@@ -1,5 +1,0 @@
-E:/Desk/UF/Disciplinas/Computação Gráfica/Ds Testes/apps/Aplicacao-Grafica-com-Ds/tp1/build/CMakeFiles/myapp.dir
-E:/Desk/UF/Disciplinas/Computação Gráfica/Ds Testes/apps/Aplicacao-Grafica-com-Ds/tp1/build/CMakeFiles/ALL_BUILD.dir
-E:/Desk/UF/Disciplinas/Computação Gráfica/Ds Testes/apps/Aplicacao-Grafica-com-Ds/tp1/build/CMakeFiles/ZERO_CHECK.dir
-E:/Desk/UF/Disciplinas/Computação Gráfica/Ds Testes/apps/Aplicacao-Grafica-com-Ds/tp1/build/cg_build/CMakeFiles/cg.dir
-E:/Desk/UF/Disciplinas/Computação Gráfica/Ds Testes/apps/Aplicacao-Grafica-com-Ds/tp1/build/cg_build/CMakeFiles/ALL_BUILD.dir
