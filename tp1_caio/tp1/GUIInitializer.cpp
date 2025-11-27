@@ -23,6 +23,9 @@ namespace cg {
         if (ImGui::CollapsingHeader("Scene Info", ImGuiTreeNodeFlags_DefaultOpen))
             drawSceneControls();
 
+        if (ImGui::CollapsingHeader("Renderer", ImGuiTreeNodeFlags_DefaultOpen))
+            drawRendererControls();
+
         if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen))
             drawCameraControls();
 
@@ -41,6 +44,29 @@ namespace cg {
         drawActorInspector();
     }
 
+    void GUIInitializer::drawRendererControls()
+    {
+        bool useRayCaster = _window.useRayCaster();
+        
+        if (ImGui::Checkbox("Use Ray Caster", &useRayCaster))
+        {
+            _window.setUseRayCaster(useRayCaster);
+        }
+        
+        ImGui::Text("Active Renderer: %s", useRayCaster ? "RayCaster (with BVH)" : "PBRRenderer (OpenGL)");
+        
+        if (useRayCaster)
+        {
+            ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "RayCaster rendering active");
+            ImGui::Text("BVH acceleration enabled");
+        }
+        else
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "OpenGL rendering active");
+            ImGui::Text("Click on objects to select them");
+        }
+    }
+
     void GUIInitializer::drawSceneControls()
     {
         auto scene = _window.scene();
@@ -48,6 +74,12 @@ namespace cg {
 
         ImGui::Text("Scene: %s", scene->name());
         ImGui::Text("Actors: %d | Lights: %d", scene->actorCount(), scene->lightCount());
+        
+        // Mostrar informação sobre BVH se RayCaster estiver ativo
+        if (_window.useRayCaster() && _window.rayCaster())
+        {
+            ImGui::Text("BVH: Active (RayCaster)");
+        }
 
         // Background Color
         float bg[3] = { scene->backgroundColor.r, scene->backgroundColor.g, scene->backgroundColor.b };

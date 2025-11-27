@@ -24,6 +24,7 @@ private:
   int _selectedActorIndex = -1;
 
   void drawSceneControls();
+  void drawRendererControls();
   void drawCameraControls();
   void drawLightControls();
   void drawMaterialControls();

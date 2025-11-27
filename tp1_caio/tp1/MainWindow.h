@@ -50,10 +50,17 @@ public:
   bool scrollEvent(double xoffset, double yoffset) override;
   bool onMouseLeftPress(int x, int y) override;
 
-  Camera* camera() { return _renderer ? _renderer->camera() : nullptr; }
+  Camera* camera();
   Scene* scene() { return _scene; }
   PBRActor* selectedActor() const { return _selectedActor; }
+  void setSelectedActor(PBRActor* actor) { _selectedActor = actor; }
   void resetScene();
+  
+  // Controle de renderer
+  bool useRayCaster() const { return _useRayCaster; }
+  void setUseRayCaster(bool use) { _useRayCaster = use; }
+  PBRRenderer* pbrRenderer() const { return _renderer; }
+  RayCaster* rayCaster() const { return _rayCaster; }
 
 protected:
   // Inicialização OpenGL
@@ -71,6 +78,7 @@ private:
   RayCaster* _rayCaster;
   GUIInitializer* _gui;
   PBRActor* _selectedActor = nullptr;
+  bool _useRayCaster = false; // false = PBRRenderer, true = RayCaster
 
   bool _isMinimized = false;
   bool _isDragging = false;

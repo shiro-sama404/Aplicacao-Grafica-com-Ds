@@ -30,7 +30,7 @@ namespace cg
 
         void render();
 
-        // Acessar cena e câmera
+        // Acessar cena e cï¿½mera
         Scene* scene() const { return _scene; }
         Camera* camera() const { return _camera; }
 
@@ -46,6 +46,12 @@ namespace cg
             const PBRMaterial& material,
             const mat4f& transform,
             const mat3f& normalMatrix);
+        
+        // Desenhar wireframe do objeto selecionado
+        void drawSelectedActorWireframe(PBRActor* actor);
+        
+        // Definir ator selecionado para destacar
+        void setSelectedActor(PBRActor* actor) { _selectedActor = actor; }
 
     protected:
         struct Viewport
@@ -67,6 +73,7 @@ namespace cg
     private:
         struct PBRData;
         PBRData* _pbrData;
+        PBRActor* _selectedActor = nullptr;
 
     }; // PBRRenderer
 

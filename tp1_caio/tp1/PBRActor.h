@@ -92,19 +92,9 @@ public:
 
   bool intersect(const Ray3f& ray) const
   {
-    if (_shape == nullptr)
-      return false;
-    
-    // Transformar raio para espaço local
-    const auto& invTransform = _inverse;
-    Ray3f localRay;
-    localRay.origin = invTransform.transform3x4(ray.origin);
-    localRay.direction = invTransform.transformVector(ray.direction).versor();
-    localRay.tMin = ray.tMin;
-    localRay.tMax = ray.tMax;
-    
-    float distance = ray.tMax;
-    return _shape->intersect(localRay, distance);
+    Intersection temp;
+    temp.distance = ray.tMax;
+    return intersect(ray, temp);
   }
 
   bool intersect(const Ray3f& ray, Intersection& hit) const

@@ -76,6 +76,10 @@ void MainWindow::resetScene()
   delete _rayCaster;
   _rayCaster = new RayCaster{*_scene, *camera};
   _rayCaster->setImageSize(width(), height());
+  
+  // Se RayCaster estiver ativo, reconstruir BVH
+  if (_useRayCaster && _rayCaster)
+    _rayCaster->rebuildBVH();
 }
 
 bool MainWindow::windowResizeEvent(int width, int height)
@@ -109,7 +113,7 @@ bool MainWindow::keyInputEvent(int key, int action, int mods)
     // Apenas processamos eventos de PRESS ou REPEAT (segurar tecla)
     if (action == GLFW_RELEASE) return false;
 
-    auto cam = _renderer ? _renderer->camera() : nullptr;
+    auto cam = camera();
     if (!cam) return false;
 
     // Velocidade de movimento
@@ -136,27 +140,37 @@ bool MainWindow::mouseButtonInputEvent(int button, int action, int mods)
 {
     if (ImGui::GetIO().WantCaptureMouse) return false;
 
-    if (action == GLFW_PRESS)
+    // Para botão esquerdo, deixar a classe base processar (ela chama onMouseLeftPress)
+    // Se onMouseLeftPress retornar true (selecionou algo), a classe base não inicia arraste
+    if (button == GLFW_MOUSE_BUTTON_LEFT)
     {
-        // Se for botão esquerdo, tentar selecionar ator
-        if (button == GLFW_MOUSE_BUTTON_LEFT)
+        // A classe base vai chamar onMouseLeftPress
+        bool handled = GLRenderWindow3::mouseButtonInputEvent(button, action, mods);
+        
+        // Se não selecionou nada e pressionou, permitir arraste para pan
+        if (action == GLFW_PRESS && !handled)
         {
+            _isDragging = true;
+            _dragButton = button;
             int x, y;
             cursorPosition(x, y);
-            if (onMouseLeftPress(x, y))
-            {
-                // Se selecionou um ator, não iniciar arraste
-                _isDragging = false;
-                _dragButton = -1;
-                return true;
-            }
+            _lastX = (double)x;
+            _lastY = (double)y;
+        }
+        else if (action == GLFW_RELEASE)
+        {
+            _isDragging = false;
+            _dragButton = -1;
         }
         
-        // Inicia o arraste
+        return handled;
+    }
+    
+    // Para outros botões, tratar arraste normalmente
+    if (action == GLFW_PRESS)
+    {
         _isDragging = true;
         _dragButton = button;
-        
-        // Obtém posição atual do cursor (método herdado de GLWindow)
         int x, y;
         cursorPosition(x, y);
         _lastX = (double)x;
@@ -168,51 +182,75 @@ bool MainWindow::mouseButtonInputEvent(int button, int action, int mods)
         _dragButton = -1;
     }
 
-    return true; // Retorna true para impedir que a classe base processe e cause crash
+    // Para botão direito e meio, usar a classe base
+    return GLRenderWindow3::mouseButtonInputEvent(button, action, mods);
 }
 
 bool MainWindow::mouseMoveEvent(double xPos, double yPos)
 {
     if (ImGui::GetIO().WantCaptureMouse) return false;
 
-    if (!_isDragging) return false;
-
-    auto cam = _renderer ? _renderer->camera() : nullptr;
-    if (!cam) return false;
-
-    // Calcula delta do movimento
-    float dx = (float)(xPos - _lastX);
-    float dy = (float)(yPos - _lastY);
-
-    // Atualiza última posição
-    _lastX = xPos;
-    _lastY = yPos;
-
-    if (dx == 0 && dy == 0) return true;
-
-    // Botão Direito: Orbit (Girar câmera)
-    if (_dragButton == GLFW_MOUSE_BUTTON_RIGHT)
+    // Se estiver arrastando com botão esquerdo e não selecionou nada, fazer pan
+    if (_isDragging && _dragButton == GLFW_MOUSE_BUTTON_LEFT)
     {
-        const float sensitivity = 0.5f;
-        cam->azimuth(-dx * sensitivity);   // Gira no eixo Y
-        cam->elevation(-dy * sensitivity); // Gira no eixo X
-    }
-    // Botão Esquerdo ou Meio: Pan (Mover câmera lateralmente)
-    else if (_dragButton == GLFW_MOUSE_BUTTON_LEFT || _dragButton == GLFW_MOUSE_BUTTON_MIDDLE)
-    {
-        // Ajusta velocidade do pan baseado na distância para parecer natural
+        auto cam = camera();
+        if (!cam) return false;
+
+        // Calcula delta do movimento
+        float dx = (float)(xPos - _lastX);
+        float dy = (float)(yPos - _lastY);
+
+        // Atualiza última posição
+        _lastX = xPos;
+        _lastY = yPos;
+
+        if (dx == 0 && dy == 0) return true;
+
+        // Pan (Mover câmera lateralmente)
         float panSpeed = cam->distance() * 0.002f;
         cam->translate(-dx * panSpeed, dy * panSpeed, 0.0f);
+        return true;
+    }
+    
+    // Para outros botões, usar a lógica padrão da classe base
+    // Mas ainda precisamos tratar botão direito e meio
+    if (_isDragging)
+    {
+        auto cam = camera();
+        if (!cam) return false;
+
+        float dx = (float)(xPos - _lastX);
+        float dy = (float)(yPos - _lastY);
+
+        _lastX = xPos;
+        _lastY = yPos;
+
+        if (dx == 0 && dy == 0) return true;
+
+        // Botão Direito: Orbit (Girar câmera)
+        if (_dragButton == GLFW_MOUSE_BUTTON_RIGHT)
+        {
+            const float sensitivity = 0.5f;
+            cam->azimuth(-dx * sensitivity);
+            cam->elevation(-dy * sensitivity);
+        }
+        // Botão Meio: Pan
+        else if (_dragButton == GLFW_MOUSE_BUTTON_MIDDLE)
+        {
+            float panSpeed = cam->distance() * 0.002f;
+            cam->translate(-dx * panSpeed, dy * panSpeed, 0.0f);
+        }
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 bool MainWindow::scrollEvent(double xOffset, double yOffset)
 {
     if (ImGui::GetIO().WantCaptureMouse) return false;
 
-    auto cam = _renderer ? _renderer->camera() : nullptr;
+    auto cam = camera();
     if (cam)
     {
         // Zoom in/out
@@ -225,39 +263,55 @@ bool MainWindow::scrollEvent(double xOffset, double yOffset)
 
 bool MainWindow::onMouseLeftPress(int x, int y)
 {
-    // Selecionar ator apenas no modo OpenGL (não durante ray casting de imagem)
+    // Selecionar ator quando RayCaster estiver DESATIVADO (modo OpenGL)
+    // O RayCaster é usado apenas para fazer o ray casting de seleção
     if (ImGui::GetIO().WantCaptureMouse) return false;
     
-    if (_rayCaster == nullptr) return false;
+    if (_rayCaster == nullptr) 
+    {
+        printf("RayCaster is null!\n");
+        return false;
+    }
     
     // Inverter coordenada Y (OpenGL tem origem no canto inferior esquerdo)
     int glY = height() - y;
     
+    printf("Trying to select at position (%d, %d) -> (%d, %d)\n", x, y, x, glY);
+    
     // Selecionar ator através de ray casting
+    // O RayCaster sempre existe e pode ser usado para seleção, mesmo quando não está ativo para renderização
     _selectedActor = _rayCaster->selectActor(x, glY);
     
-    // Atualizar GUI com ator selecionado
-    if (_gui && _selectedActor)
+    // Atualizar PBRRenderer com o ator selecionado para feedback visual
+    if (_renderer)
     {
-        // Encontrar índice do ator selecionado
-        auto scene = _scene;
-        if (scene)
-        {
-            const auto& actors = scene->actors();
-            for (size_t i = 0; i < actors.size(); ++i)
-            {
-                if (actors[i] == _selectedActor)
-                {
-                    // Atualizar seleção na GUI (precisamos expor isso)
-                    // Por enquanto, apenas log
-                    printf("Selected actor: %s\n", _selectedActor->name());
-                    break;
-                }
-            }
-        }
+        _renderer->setSelectedActor(_selectedActor);
     }
     
-    return _selectedActor != nullptr;
+    // Atualizar GUI com ator selecionado
+    if (_selectedActor)
+    {
+        printf("Selected actor: %s\n", _selectedActor->name());
+        // Se selecionou um ator, retornar true para impedir arraste
+        return true;
+    }
+    else
+    {
+        printf("No actor selected at position (%d, %d)\n", x, glY);
+    }
+    
+    // Se não selecionou nada, permitir que o arraste funcione
+    return false;
+}
+
+Camera*
+MainWindow::camera()
+{
+  if (_useRayCaster && _rayCaster)
+    return _rayCaster->camera();
+  else if (_renderer)
+    return _renderer->camera();
+  return nullptr;
 }
 
 void
@@ -265,8 +319,23 @@ MainWindow::render()
 {
   if (_isMinimized) return;
   
-  if (_renderer != nullptr)
-    _renderer->render();
+  // Usar o renderer ativo baseado na opção
+  // Se RayCaster estiver ativo, desativar PBRRenderer
+  if (_useRayCaster)
+  {
+    // RayCaster está ativo - PBRRenderer desativado
+    // Por enquanto, RayCaster é usado apenas para seleção
+    // A renderização visual ainda usa PBRRenderer, mas isso pode ser mudado
+    // para renderizar imagem completa com ray casting se necessário
+    if (_renderer != nullptr)
+      _renderer->render();
+  }
+  else
+  {
+    // PBRRenderer está ativo - RayCaster desativado
+    if (_renderer != nullptr)
+      _renderer->render();
+  }
 }
 
 void

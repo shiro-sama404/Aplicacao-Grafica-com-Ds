@@ -49,6 +49,12 @@ public:
 
   // Selecionar ator através de raio disparado da câmera
   PBRActor* selectActor(int x, int y);
+  
+  // Acessar câmera
+  Camera* camera() const { return _camera; }
+  
+  // Reconstruir BVH (útil quando a cena muda)
+  void rebuildBVH() { buildBVH(); }
 
 private:
   struct Viewport

@@ -30,9 +30,19 @@ RayCaster::buildBVH()
       actors.push_back(actor);
   }
   
+  printf("Building BVH with %zu actors\n", actors.size());
+  
   if (!actors.empty())
   {
     _bvh = new BVH<PBRActor>{std::move(actors), 8, BVHBase::SplitMethod::SAH};
+    printf("BVH built successfully. Bounds: ");
+    auto bounds = _bvh->bounds();
+    bounds.min().print("min: ");
+    bounds.max().print("max: ");
+  }
+  else
+  {
+    printf("Warning: No visible actors to build BVH!\n");
   }
 }
 
@@ -92,11 +102,53 @@ RayCaster::intersect(const Ray3f& ray, Intersection& hit)
   hit.distance = ray.tMax;
   
   if (_bvh == nullptr || _bvh->empty())
+  {
+    printf("BVH is null or empty in intersect()\n");
     return false;
+  }
   
   // Usar BVH para encontrar interseção
   // O BVH trabalha com PBRActor que já tem métodos intersect implementados
-  return _bvh->intersect(ray, hit);
+  bool found = _bvh->intersect(ray, hit);
+  
+  if (!found)
+  {
+    // Tentar busca linear como fallback para debug
+    printf("BVH intersect returned false. Trying linear search...\n");
+    PBRActor* closestActor = nullptr;
+    float closestDistance = ray.tMax;
+    
+    for (auto actor : _scene->actors())
+    {
+      if (!actor->isVisible())
+        continue;
+      
+      Intersection tempHit;
+      tempHit.distance = closestDistance;
+      if (actor->intersect(ray, tempHit))
+      {
+        if (tempHit.distance < closestDistance)
+        {
+          closestDistance = tempHit.distance;
+          closestActor = actor;
+        }
+      }
+    }
+    
+    if (closestActor != nullptr)
+    {
+      printf("Linear search found actor: %s at distance %f\n", closestActor->name(), closestDistance);
+      hit.object = closestActor;
+      hit.distance = closestDistance;
+      return true;
+    }
+    else
+    {
+      printf("Linear search also found nothing\n");
+    }
+  }
+  
+  return found;
 }
 
 Color
@@ -286,15 +338,36 @@ RayCaster::renderImage(Image& image)
 PBRActor*
 RayCaster::selectActor(int x, int y)
 {
+  if (_bvh == nullptr || _bvh->empty())
+  {
+    printf("BVH is null or empty! Rebuilding...\n");
+    buildBVH();
+    if (_bvh == nullptr || _bvh->empty())
+    {
+      printf("Still no BVH after rebuild!\n");
+      return nullptr;
+    }
+  }
+  
   Ray3f ray;
   setPixelRay((float)x + 0.5f, (float)y + 0.5f, ray);
   
+  printf("Ray origin: ");
+  ray.origin.print("");
+  printf("Ray direction: ");
+  ray.direction.print("");
+  printf("Ray tMin: %f, tMax: %f\n", ray.tMin, ray.tMax);
+  
   Intersection hit;
+  hit.distance = ray.tMax;
+  
   if (intersect(ray, hit))
   {
+    printf("Intersection found! Distance: %f\n", hit.distance);
     return (PBRActor*)hit.object;
   }
   
+  printf("No intersection found\n");
   return nullptr;
 }
 
