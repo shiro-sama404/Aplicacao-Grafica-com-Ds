@@ -2,7 +2,7 @@
 //|                                                                 |
 //| PBRActor.h                                                      |
 //|                                                                 |
-//| PBR Actor with shape and material for TP1                       |
+//| PBR Actor with shape and material for TP1                      |
 //|                                                                 |
 //[]---------------------------------------------------------------[]
 
@@ -10,77 +10,141 @@
 
 #include "Shape3.h"
 #include "PBRMaterial.h"
-
-#include <math/matrix4x4.h>
+#include "core/SharedObject.h"
+#include "math/Matrix4x4.h"
 #include <string>
 
 namespace cg
 { // begin namespace cg
+
 //
 // PBRActor: ator com forma geométrica e material PBR
 //
-class PBRActor : public SharedObject
+class PBRActor: public SharedObject
 {
-using mat3 = Matrix3x3<float>;
-using mat4 = Matrix4x4<float>;
-
 public:
   bool visible;
 
   // Construtor com nome, shape e material
-  PBRActor
-  (
-    const std::string& actorName, 
-    Shape3* shape,
-    const PBRMaterial& material
-  ):
+  PBRActor(const std::string& actorName, 
+           Shape3* shape,
+           PBRMaterial* material):
     _name{actorName},
     _shape{shape},
     _material{material},
-    _transform{ mat4::identity() },
-    _inverse{ mat4::identity() },
-    _normalMatrix{ mat3::identity()},
+    _transform{mat4f::identity()},
+    _inverse{mat4f::identity()},
+    _normalMatrix{mat3f::identity()},
     visible{true}
-  {}
+  {
+    // do nothing
+  }
 
   // Nome do ator
-  const char* name() const { return _name.c_str(); }
-  void setName(const std::string& actorName){  _name = actorName; }
+  const char* name() const
+  {
+    return _name.c_str();
+  }
+
+  void setName(const std::string& actorName)
+  {
+    _name = actorName;
+  }
 
   // Visibilidade
-  bool isVisible() const { return visible; }
-  void setVisible(bool v){ visible = v; }
+  bool isVisible() const
+  {
+    return visible;
+  }
+
+  void setVisible(bool v)
+  {
+    visible = v;
+  }
 
   // Shape (forma geométrica)
-  Shape3* shape() const { return _shape; }
+  Shape3* shape() const
+  {
+    return _shape;
+  }
 
   // Transformação
-  const mat4f transform() const { return _transform; }
+  const mat4f& transform() const
+  {
+    return _transform;
+  }
+
   void setTransform(const mat4f& transform)
   {
     _transform = transform;
-
-    if (!_transform.inverse(_inverse, cg::math::Limits<float>::eps()))
-      _inverse = mat4::identity();
-
-    _normalMatrix = (mat3(_inverse)).transpose();
+    
+    // Calcular inversa para normal matrix
+    if (!_transform.inverse(_inverse, math::Limits<float>::eps()))
+      _inverse = mat4f::identity();
+    
+    // Normal matrix = (M^-1)^T
+    _normalMatrix = mat3f{_inverse}.transpose();
   }
 
-  const mat4& inverseTransform() const { return _inverse; }
-  const mat3& normalMatrix() const { return _normalMatrix; }
+  const mat4f& inverseTransform() const
+  {
+    return _inverse;
+  }
 
-  // Material PBR
-  const PBRMaterial& pbrMaterial() const { return _material; }
-  PBRMaterial& pbrMaterial() { return _material; }
-  void setPBRMaterial(const PBRMaterial& material) { _material = material; }
+  const mat3f& normalMatrix() const
+  {
+    return _normalMatrix;
+  }
+
+  // Material PBR (com Reference)
+  const PBRMaterial* pbrMaterial() const
+  {
+    return _material;
+  }
+
+  PBRMaterial* pbrMaterial()
+  {
+    return _material;
+  }
+
+  void setPBRMaterial(PBRMaterial* material)
+  {
+    _material = material;
+  }
+
+  // Métodos de conveniência para modificar material
+  void setDiffuseColor(const Color& color)
+  {
+    if (_material)
+      _material->Od = color;
+  }
+
+  void setSpecularColor(const Color& color)
+  {
+    if (_material)
+      _material->Os = color;
+  }
+
+  void setRoughness(float roughness)
+  {
+    if (_material)
+      _material->roughness = math::clamp(roughness, 0.0f, 1.0f);
+  }
+
+  void setMetalness(float metalness)
+  {
+    if (_material)
+      _material->metalness = math::clamp(metalness, 0.0f, 1.0f);
+  }
 
 private:
   std::string _name;
   Reference<Shape3> _shape;
-  PBRMaterial _material;
-  mat4 _transform;
-  mat4 _inverse;
-  mat3 _normalMatrix;
+  Reference<PBRMaterial> _material;
+  mat4f _transform;
+  mat4f _inverse;
+  mat3f _normalMatrix;
+
 }; // PBRActor
 
 } // end namespace cg

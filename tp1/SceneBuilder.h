@@ -53,7 +53,7 @@ private:
       light->setType(Light::Type::Point);
       light->setPosition({-5, 5, 5});
       light->color = Color::white;
-      light->falloff = Light::Falloff::Quadratic;
+      light->falloff = Light::Falloff::Linear;
       scene->addLight(light);
     }
     
@@ -62,8 +62,8 @@ private:
       auto light = new Light{};
       light->setType(Light::Type::Point);
       light->setPosition({5, 5, 5});
-      light->color = Color{1.0f, 0.95f, 0.8f}; // Luz quente
-      light->falloff = Light::Falloff::Quadratic;
+      light->color = Color::red; // Luz quente
+      light->falloff = Light::Falloff::Linear;
       scene->addLight(light);
     }
     
@@ -72,8 +72,8 @@ private:
       auto light = new Light{};
       light->setType(Light::Type::Point);
       light->setPosition({0, 3, -8});
-      light->color = Color{0.7f, 0.8f, 1.0f}; // Luz fria
-      light->falloff = Light::Falloff::Quadratic;
+      light->color = Color::blue; // Luz fria
+      light->falloff = Light::Falloff::Linear;
       scene->addLight(light);
     }
   }
@@ -112,13 +112,13 @@ private:
       auto material = PBRMaterial::dielectric(colors[i], roughnesses[i]);
       
       // Criar shape (esfera)
-      auto shape = new Sphere{1.0f, 3}; // raio=1, subdiv=3
+      auto shape = new Sphere{1.0f}; // raio=1, subdiv=3
       
       char name[32];
       snprintf(name, 32, "Dielectric_%d", i);
       
       auto actor = new PBRActor{name, shape, material};
-      actor->setTransform(mat4f::TRS(position, quatf::identity(), vec3f{1}));
+      actor->setTransform(mat4f::translation(position));
       
       scene->addActor(actor);
     }
@@ -146,13 +146,15 @@ private:
     for(int i = 0; i < 5; ++i)
     {
       vec3f position = startPos + vec3f{i * spacing, 0, 0};
+
+      // Criar material
+      auto material = materialFuncs[i](roughnesses[i]);
       
       // Criar shape (esfera)
       auto shape = new Sphere{1.0f, 3}; // raio=1, subdiv=3
       
-      auto actor = new PBRActor{names[i], shape, materials[i]};
-      actor->setTransform(mat4f::TRS(position, quatf::identity(), vec3f{1}));
-      
+      auto actor = new PBRActor{names[i], shape, material};
+      actor->setTransform(mat4f::translation(position));
       scene->addActor(actor);
     }
   }
