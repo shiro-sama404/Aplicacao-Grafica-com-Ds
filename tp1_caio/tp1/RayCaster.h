@@ -73,7 +73,7 @@ private:
   Color trace(const Ray3f& ray, int depth = 0);
   bool intersect(const Ray3f& ray, Intersection& hit);
   Color shade(const Ray3f& ray, const Intersection& hit);
-  Color calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial& material);
+  Color calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial* material);
   vec3f imageToWindow(float x, float y) const;
   Color background() const;
 

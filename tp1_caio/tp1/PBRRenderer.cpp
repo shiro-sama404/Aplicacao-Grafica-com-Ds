@@ -256,11 +256,11 @@ void PBRRenderer::renderActors()
     auto shape = actor->shape();
     if(shape == nullptr) continue;
     
-    const auto& mesh = shape->mesh(); 
+    const auto mesh = shape->mesh(); 
     if(mesh)
     {
       drawMeshPBR(*mesh, 
-                  actor->pbrMaterial(), 
+                  *actor->pbrMaterial(), 
                   actor->transform(),   
                   actor->normalMatrix() 
       );

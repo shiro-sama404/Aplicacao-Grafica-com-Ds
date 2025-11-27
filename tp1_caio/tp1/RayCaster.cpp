@@ -152,16 +152,16 @@ RayCaster::intersect(const Ray3f& ray, Intersection& hit)
 }
 
 Color
-RayCaster::calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial& material)
+RayCaster::calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial* material)
 {
   vec3f V = (_camera->position() - P).versor();
   vec3f normal = N.versor();
   
   // F0 para Fresnel
-  vec3f F0 = vec3f{material.Os.r, material.Os.g, material.Os.b} * material.metalness + vec3f{MIN_SPEC, MIN_SPEC, MIN_SPEC} * (1.0f - material.metalness);
+  vec3f F0 = vec3f{material->Os.r, material->Os.g, material->Os.b} * material->metalness + vec3f{MIN_SPEC, MIN_SPEC, MIN_SPEC} * (1.0f - material->metalness);
   
   // Albedo
-  vec3f albedo = vec3f{material.Od.r, material.Od.g, material.Od.b} * (1.0f - material.metalness);
+  vec3f albedo = vec3f{material->Od.r, material->Od.g, material->Od.b} * (1.0f - material->metalness);
   
   Color Lo{0, 0, 0};
   
@@ -199,7 +199,7 @@ RayCaster::calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial& mater
     float VdotH = std::max(V.dot(H), 0.0f);
     
     // Roughness
-    float a = material.roughness * material.roughness;
+    float a = material->roughness * material->roughness;
     float a2 = a * a;
     
     // Distribution GGX (D)
@@ -208,7 +208,7 @@ RayCaster::calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial& mater
     float D = a2 / (PI * denom * denom);
     
     // Geometry Smith (G)
-    float k = (material.roughness + 1.0f) * (material.roughness + 1.0f) / 8.0f;
+    float k = (material->roughness + 1.0f) * (material->roughness + 1.0f) / 8.0f;
     float G1V = NdotV / (NdotV * (1.0f - k) + k);
     float G1L = NdotL / (NdotL * (1.0f - k) + k);
     float G = G1V * G1L;
@@ -222,7 +222,7 @@ RayCaster::calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial& mater
     
     // kS e kD
     vec3f kS = F;
-    vec3f kD = (vec3f{1, 1, 1} - kS) * (1.0f - material.metalness);
+    vec3f kD = (vec3f{1, 1, 1} - kS) * (1.0f - material->metalness);
     
     // Contribuição da luz
     vec3f radianceVec = vec3f{radiance.r, radiance.g, radiance.b};
@@ -274,7 +274,7 @@ RayCaster::shade(const Ray3f& ray, const Intersection& hit)
   }.versor();
   
   // Obter material
-  const auto& material = actor->pbrMaterial();
+  const auto * material = actor->pbrMaterial();
   
   // Calcular cor PBR
   return calculatePBR(P, N, material);
