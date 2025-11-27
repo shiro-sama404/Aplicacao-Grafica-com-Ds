@@ -1,41 +1,30 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| PBRMaterial.h                                                   |
-//|                                                                 |
-//| PBR Material structure for TP1                                 |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #pragma once
 
 #include "core/SharedObject.h"
 #include "graphics/Color.h"
 
 namespace cg
-{ // begin namespace cg
+{
 
-//
-// PBRMaterial: material PBR (shared object)
-//
+// Estrutura de dados para representação de propriedades de materiais PBR (Physically Based Rendering).
 class PBRMaterial: public SharedObject
 {
 public:
-  Color Od;        // Diffuse reflection color
-  Color Os;        // Specular reflection color
-  float roughness; // Rugosidade [0,1]
-  float metalness; // Metalicidade [0,1]
+  Color Od;        // Componente de reflexão difusa (Albedo).
+  Color Os;        // Componente de reflexão especular (F0 para metais).
+  float roughness; // Fator de rugosidade da microfacetas [0, 1].
+  float metalness; // Fator de metalicidade [0, 1].
 
-  // Construtor padrão: dielétrico cinza
+  // Construtor padrão: inicializa como um material dielétrico neutro.
   PBRMaterial():
     Od(Color{0.5f, 0.5f, 0.5f}),
     Os(Color{0.04f, 0.04f, 0.04f}),
     roughness{0.5f},
     metalness{0.0f}
   {
-    // do nothing
   }
 
-  // Construtor completo
+  // Construtor parametrizado para definição completa das propriedades.
   PBRMaterial(const Color& diffuse,
               const Color& specular,
               float r,
@@ -45,7 +34,6 @@ public:
     roughness{r},
     metalness{m}
   {
-    // do nothing
   }
 
   auto clone() const
@@ -53,7 +41,8 @@ public:
     return new PBRMaterial{*this};
   }
 
-  // Presets para metais comuns (retornam ponteiros)
+  // Métodos estáticos de fábrica para metais comuns baseados em valores físicos.
+  
   static PBRMaterial* copper(float r = 0.3f)
   {
     return new PBRMaterial(Color{0, 0, 0}, Color{0.95f, 0.64f, 0.54f}, r, 1.0f);
@@ -79,12 +68,12 @@ public:
     return new PBRMaterial(Color{0, 0, 0}, Color{1.0f, 0.71f, 0.29f}, r, 1.0f);
   }
 
-  // Preset para dielétricos
+  // Método de fábrica para materiais dielétricos (não-metais).
   static PBRMaterial* dielectric(const Color& diffuse, float r = 0.5f)
   {
     return new PBRMaterial(diffuse, Color{0.04f, 0.04f, 0.04f}, r, 0.0f);
   }
 
-}; // PBRMaterial
+};
 
-} // end namespace cg
+}

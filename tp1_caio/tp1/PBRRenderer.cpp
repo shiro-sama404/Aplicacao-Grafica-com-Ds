@@ -1,14 +1,5 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| PBRRenderer.cpp                                                 |
-//|                                                                 |
-//| Physically-Based Rendering renderer for TP1                     |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #include "PBRRenderer.h"
 #include "PBRActor.h"
-// IMPORTANTE: Necessário para GLSL::Program e para a função glMesh()
 #include "graphics/GLGraphics3.h"
 #include "graphics/Color.h" 
 
@@ -132,7 +123,12 @@ static const char* pbrFragmentShader = STRINGIFY(
   
   void main() {
     vec3 color = calculatePBR(vPosition, vNormal);
-    color = color / (color + vec3(1.0)); // Tone mapping
+    
+    // clamp
+    if(color.r > 1.0) color.r = 1.0;
+    if(color.g > 1.0) color.g = 1.0;
+    if(color.b > 1.0) color.b = 1.0;
+
     color = pow(color, vec3(1.0/2.2));   // Gamma
     fragmentColor = vec4(color, 1.0);
   }

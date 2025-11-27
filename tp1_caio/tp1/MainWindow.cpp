@@ -360,10 +360,7 @@ MainWindow::render()
   if (_useRayCaster)
   {
     // RayCaster está ativo - PBRRenderer desativado
-    // Por enquanto, RayCaster é usado apenas para seleção
-    // A renderização visual ainda usa PBRRenderer, mas isso pode ser mudado
-    // para renderizar imagem completa com ray casting se necessário
-    if (_renderer != nullptr)
+    if (_rayCaster != nullptr)
       _renderer->render();
   }
   else

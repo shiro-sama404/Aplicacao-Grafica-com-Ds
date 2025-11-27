@@ -1,11 +1,3 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| Sphere.h                                                   |
-//|                                                                 |
-//| Sphere shape for TP1                                           |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #pragma once
 
 #include "Shape3.h"
@@ -16,11 +8,9 @@
 #include <algorithm>
 
 namespace cg
-{ // begin namespace cg
+{
 
-//
-// Sphere: esfera
-//
+// Implementação da primitiva geométrica Esfera.
 class Sphere: public Shape3
 {
 public:
@@ -33,21 +23,19 @@ public:
 
   float radius() const { return _radius; }
 
+  // Calcula a normal da superfície no ponto P.
   vec3f normalAt(const vec3f& P) const override
   {
-    // Para esfera centrada na origem, a normal é simplesmente P normalizado
     return P.versor();
   }
 
+  // Verifica interseção entre um raio e a esfera.
   bool intersect(const Ray3f& ray, float& distance) const override
   {
-    // Interseção raio-esfera (esfera centrada na origem)
-    // (O + tD) · (O + tD) = r²
-    // Onde O = ray.origin, D = ray.direction
-    
     const vec3f& O = ray.origin;
     const vec3f& D = ray.direction;
     
+    // Coeficientes da equação quadrática para interseção raio-esfera.
     float a = D.squaredNorm();
     float b = 2.0f * (O.dot(D));
     float c = O.squaredNorm() - _radius * _radius;
@@ -55,13 +43,13 @@ public:
     float discriminant = b * b - 4.0f * a * c;
     
     if (discriminant < 0)
-      return false; // Sem interseção
+      return false;
     
     float sqrtDisc = std::sqrt(discriminant);
     float t1 = (-b - sqrtDisc) / (2.0f * a);
     float t2 = (-b + sqrtDisc) / (2.0f * a);
     
-    // Escolher menor t positivo
+    // Considera o menor t positivo.
     float t = t1 > 0 ? t1 : t2;
     
     if (t > 0 && t < distance)
@@ -73,6 +61,7 @@ public:
     return false;
   }
 
+  // Retorna a Axis-Aligned Bounding Box (AABB) da esfera.
   Bounds3f bounds() const override
   {
     return Bounds3f{
@@ -85,13 +74,13 @@ protected:
   float _radius;
   int _subdivisions;
 
-void generateMesh() override
-{
-    // 1. Gerar geometria usando std::vector (Segurança > Micro-otimização agora)
+  // Gera a malha poligonal via subdivisão recursiva de um icosaedro.
+  void generateMesh() override
+  {
     std::vector<vec3f> vertices;
     std::vector<std::array<int, 3>> triangles;
 
-    // Icosaedro base
+    // Definição do icosaedro base.
     const float t = (1.0f + std::sqrt(5.0f)) / 2.0f;
     vertices = {
       vec3f{-1,  t,  0}.versor(), vec3f{ 1,  t,  0}.versor(), vec3f{-1, -t,  0}.versor(), vec3f{ 1, -t,  0}.versor(),
@@ -106,7 +95,7 @@ void generateMesh() override
       {4, 9, 5}, {2, 4, 11}, {6, 2, 10}, {8, 6, 7}, {9, 8, 1}
     };
 
-    // Subdivisão
+    // Processo de subdivisão dos triângulos.
     for (int i = 0; i < _subdivisions; ++i)
     {
       std::vector<std::array<int, 3>> newTriangles;
@@ -144,7 +133,7 @@ void generateMesh() override
       triangles = newTriangles;
     }
 
-    // 2. Alocar arrays finais para TriangleMesh
+    // Construção e alocação da estrutura TriangleMesh.
     int numVertices = (int)vertices.size();
     int numTriangles = (int)triangles.size();
 
@@ -153,7 +142,6 @@ void generateMesh() override
     vec2f* uvArray = new vec2f[numVertices];
     TriangleMesh::Triangle* triangleArray = new TriangleMesh::Triangle[numTriangles];
 
-    // Copiar dados
     for (int i = 0; i < numVertices; ++i)
     {
         vertexArray[i] = vertices[i] * _radius;
@@ -178,8 +166,8 @@ void generateMesh() override
     };
 
     _mesh = new TriangleMesh{std::move(data)};
+  }
+
+};
+
 }
-
-}; // Sphere
-
-} // end namespace cg

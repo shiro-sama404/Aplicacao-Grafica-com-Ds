@@ -1,20 +1,10 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| PBRRenderer.h                                                   |
-//|                                                                 |
-//| Physically-Based Rendering renderer for TP1                    |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #pragma once
 
 #include "graphics/Camera.h"
 #include "Scene.h"
 #include "PBRMaterial.h"
 #include "geometry/TriangleMesh.h"
-//#include "graphics/GLSL.h"
 #include "core/Globals.h"
-//#include <GL/glew.h>
 
 namespace cg
 { // begin namespace cg

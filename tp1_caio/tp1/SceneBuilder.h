@@ -1,11 +1,3 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| SceneBuilder.h                                                  |
-//|                                                                 |
-//| Scene builder helper for TP1                                   |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #pragma once
 
 #include "Scene.h"
@@ -17,25 +9,20 @@
 #include "Box.h"
 
 namespace cg
-{ // begin namespace cg
+{
 
-//
-// SceneBuilder: helper para construir a cena do trabalho
-//
+// Classe utilitária estática para construção e população da cena padrão.
 class SceneBuilder
 {
 public:
+  // Inicializa a cena principal com iluminação e geometria de teste PBR.
   static Scene* buildDefaultScene()
   {
     auto scene = new Scene{"TP1 PBR Scene"};
     
-    // Configurar cor de fundo
     scene->backgroundColor = Color::gray;
     
-    // Adicionar luzes
     addLights(scene);
-    
-    // Adicionar chão e atores
     addFloor(scene);
     addActors(scene);
     
@@ -43,11 +30,10 @@ public:
   }
 
 private:
+  // Configura um sistema de iluminação de três pontos (Key, Fill, Back lights).
   static void addLights(Scene* scene)
   {
-    // Ajustei levemente as luzes para iluminar melhor a área horizontal
-    
-    // Luz 1: Principal (Branca)
+    // Luz Principal (Key Light) - Branca constante
     {
       auto light = new Light{};
       light->setType(Light::Type::Point);
@@ -57,7 +43,7 @@ private:
       scene->addLight(light);
     }
     
-    // Luz 2: Fill Light (Quente)
+    // Luz de Preenchimento (Fill Light) - Tom quente, atenuação linear
     {
       auto light = new Light{};
       light->setType(Light::Type::Point);
@@ -67,7 +53,7 @@ private:
       scene->addLight(light);
     }
     
-    // Luz 3: Back Light (Fria/Azulada)
+    // Luz de Recorte (Back Light) - Tom frio, atenuação linear
     {
       auto light = new Light{};
       light->setType(Light::Type::Point);
@@ -78,9 +64,9 @@ private:
     }
   }
 
+  // Adiciona o plano de chão com rotação adequada e material base.
   static void addFloor(Scene* scene)
   {
-    // Cria plano 25x25 (Originalmente em pé no XY)
     auto shape = new Plane{25.0f, 25.0f};
     
     auto material = new PBRMaterial(
@@ -92,9 +78,7 @@ private:
 
     auto actor = new PBRActor{"Floor", shape, material};
     
-    // USANDO SEU QUATERNION.H:
-    // Rotação de -90 graus no eixo X (vec3f{1,0,0})
-    // O construtor é: Quaternion(real angle, const vec3& axis)
+    // Rotação de -90 graus no eixo X para alinhar o plano horizontalmente.
     quatf rotation{-90.0f, vec3f{1.0f, 0.0f, 0.0f}};
     
     actor->setTransform(mat4f::TRS({0, 0, 0}, rotation, vec3f{1}));
@@ -102,39 +86,31 @@ private:
     scene->addActor(actor);
   }
   
+  // Organiza os atores em fileiras para demonstração de materiais.
   static void addActors(Scene* scene)
   {
     const float xSpacing = 2.5f; 
     const float zSpacing = 3.0f; 
-    
-    // Posição X inicial para centralizar as fileiras
     float startX = -5.0f;
 
-    // --- CÁLCULO DAS ELEVAÇÕES (Y) ---
-    
-    // Esfera (Raio 1.0): O centro deve estar em 1.0 para a base tocar o zero.
-    // Usamos 1.0f cravado (ou 1.01f se quiser garantir que não haja z-fighting com o chão)
+    // Ajuste de altura para que a base dos objetos toque o plano (Y=0).
     float sphereY = 1.0f;
+    float boxY = 1.0f; // Centro geométrico ajustado para o box de altura 1.5 ser posicionado corretamente.
 
-    // Box (Tamanho 1.5): A altura total é 1.5, logo a metade é 0.75.
-    // O centro deve estar em 0.75 para a base tocar o zero.
-    float boxY = 1.0f;
-
-    // --- CRIAÇÃO DAS FILEIRAS ---
-
-    // 1. Fundo: Esferas Dielétricas
+    // Esferas Dielétricas
     addDielectricRow(scene, {startX, sphereY, -zSpacing * 1.5f}, xSpacing);
     
-    // 2. Meio-Fundo: Boxes Mistos
+    // Boxes com propriedades mistas
     addBoxRow(scene, {startX, boxY, -zSpacing * 0.5f}, xSpacing);
     
-    // 3. Meio-Frente: Esferas Metálicas
+    // Esferas Metálicas
     addMetalRow(scene, {startX, sphereY, zSpacing * 0.5f}, xSpacing);
 
-    // 4. Frente: Boxes Metálicos
+    // Boxes Metálicos
     addMetalBoxRow(scene, {startX, boxY, zSpacing * 1.5f}, xSpacing);
   }
   
+  // Gera fileira de esferas não-metálicas com rugosidade variável.
   static void addDielectricRow(Scene* scene, const vec3f& startPos, float spacing)
   {
     Color colors[] = {
@@ -146,7 +122,7 @@ private:
     for(int i = 0; i < 5; ++i)
     {
       vec3f position = startPos + vec3f{i * spacing, 0, 0};
-      // Alocação segura (Heap)
+      
       auto material = PBRMaterial::dielectric(colors[i], roughnesses[i]);
       auto shape = new Sphere{1.0f, 3};
       
@@ -159,6 +135,7 @@ private:
     }
   }
   
+  // Gera fileira de esferas com presets metálicos (Cobre, Alumínio, etc).
   static void addMetalRow(Scene* scene, const vec3f& startPos, float spacing)
   {
     float roughnesses[] = {0.1f, 0.3f, 0.5f, 0.7f, 0.9f};
@@ -179,6 +156,7 @@ private:
     }
   }
   
+  // Gera fileira de caixas variando metalicidade e rugosidade.
   static void addBoxRow(Scene* scene, const vec3f& startPos, float spacing)
   {
     Color colors[] = {
@@ -191,7 +169,7 @@ private:
     for(int i = 0; i < 5; ++i)
     {
       vec3f position = startPos + vec3f{i * spacing, 0, 0};
-      // CORREÇÃO: Alocação na Heap
+      
       auto material = new PBRMaterial(
           colors[i], 
           Color{0.04f, 0.04f, 0.04f} * (1.0f - metalness[i]) + colors[i] * metalness[i],
@@ -209,6 +187,7 @@ private:
     }
   }
 
+  // Gera fileira de caixas puramente metálicas.
   static void addMetalBoxRow(Scene* scene, const vec3f& startPos, float spacing)
   {
     float roughnesses[] = {0.1f, 0.3f, 0.5f, 0.7f, 0.9f};
@@ -229,6 +208,6 @@ private:
     }
   }
 
-}; // SceneBuilder
+};
 
-} // end namespace cg
+}

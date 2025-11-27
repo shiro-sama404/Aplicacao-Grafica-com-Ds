@@ -1,11 +1,3 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| PBRActor.h                                                      |
-//|                                                                 |
-//| PBR Actor with shape and material for TP1                       |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #pragma once
 
 #include "Shape3.h"
@@ -18,10 +10,10 @@
 #include <string>
 
 namespace cg
-{ // begin namespace cg
-//
-// PBRActor: ator com forma geométrica e material PBR
-//
+{
+
+// Entidade principal da cena, compondo uma forma geométrica (Shape) e um material (PBRMaterial).
+// Responsável por gerenciar transformações espaciais (Mundo <-> Objeto) e testes de interseção.
 class PBRActor : public SharedObject
 {
 using mat3 = Matrix3x3<float>;
@@ -30,12 +22,12 @@ using mat4 = Matrix4x4<float>;
 public:
   bool visible;
 
-  // Construtor com nome, shape e material
+  // Construtor: Inicializa o ator com geometria, material e matrizes de transformação identidade.
   PBRActor
   (
     const std::string& actorName, 
     Shape3* shape,
-    PBRMaterial*  material
+    PBRMaterial* material
   ):
     _name{actorName},
     _shape{shape},
@@ -46,56 +38,61 @@ public:
     visible{true}
   {}
 
-  // Nome do ator
   const char* name() const { return _name.c_str(); }
   void setName(const std::string& actorName){  _name = actorName; }
 
-  // Visibilidade
   bool isVisible() const { return visible; }
   void setVisible(bool v){ visible = v; }
 
-  // Shape (forma geométrica)
+  // Retorna a primitiva geométrica associada.
   Shape3* shape() const { return _shape; }
 
-  // Transformação
+  // Acesso e modificação da matriz de transformação (Model Matrix).
   const mat4f transform() const { return _transform; }
+  
+  // Define a transformação e atualiza as matrizes derivadas (Inversa e Normal).
   void setTransform(const mat4f& transform)
   {
     _transform = transform;
 
+    // Calcula a inversa para transformações de raio (World -> Local).
     if (!_transform.inverse(_inverse, cg::math::Limits<float>::eps()))
       _inverse = mat4::identity();
 
+    // Calcula a matriz normal (Transposta da Inversa) para correção de normais sob escala não uniforme.
     _normalMatrix = (mat3(_inverse)).transpose();
   }
 
   const mat4& inverseTransform() const { return _inverse; }
   const mat3& normalMatrix() const { return _normalMatrix; }
 
-  // Material PBR
+  // Gerenciamento do material PBR.
   const PBRMaterial* pbrMaterial() const { return _material; }
   PBRMaterial* pbrMaterial() { return _material; }
   void setPBRMaterial(PBRMaterial* material) { _material = material; }
 
-  // Métodos para BVH
+  // --- Interfaces para Estruturas de Aceleração (BVH) ---
+
+  // Calcula a AABB (Axis-Aligned Bounding Box) no espaço do mundo.
   Bounds3f bounds() const
   {
     if (_shape == nullptr)
       return Bounds3f{};
     
-    // Transformar bounds do shape para espaço global
     Bounds3f localBounds = _shape->bounds();
+    // Aplica a transformação afim à AABB local para obter a AABB global.
     Bounds3f globalBounds{localBounds, _transform};
     
     return globalBounds;
   }
 
+  // Teste de interseção simplificado (apenas booleano).
   bool intersect(const Ray3f& ray) const
   {
     if (_shape == nullptr)
       return false;
     
-    // Transformar raio para espaço local
+    // Transforma o raio do espaço Mundo para o espaço Local do objeto.
     const auto& invTransform = _inverse;
     Ray3f localRay;
     localRay.origin = invTransform.transform3x4(ray.origin);
@@ -107,29 +104,33 @@ public:
     return _shape->intersect(localRay, distance);
   }
 
+  // Teste de interseção detalhado, preenchendo a estrutura Intersection.
   bool intersect(const Ray3f& ray, Intersection& hit) const
   {
     if (_shape == nullptr)
       return false;
     
-    // Transformar raio para espaço local
+    // Transformação do Raio: Mundo -> Local
     const auto& invTransform = _inverse;
     Ray3f localRay;
     localRay.origin = invTransform.transform3x4(ray.origin);
     localRay.direction = invTransform.transformVector(ray.direction).versor();
     localRay.tMin = ray.tMin;
-    localRay.tMax = hit.distance;
+    localRay.tMax = hit.distance; // Otimização: ignora interseções mais distantes que a atual.
     
     float localDistance = hit.distance;
+    
+    // Interseção na Primitiva (Espaço Local)
     if (_shape->intersect(localRay, localDistance))
     {
-      // Transformar ponto de interseção de volta para espaço global
+      // Conversão da Distância: Local -> Mundo
+      // Necessário pois a escala do objeto afeta o valor de 't'.
       vec3f localPoint = localRay(localDistance);
       vec3f worldPoint = _transform.transform3x4(localPoint);
       vec3f toPoint = worldPoint - ray.origin;
       float worldDistance = toPoint.length();
       
-      // Verificar se o raio está indo na direção correta
+      // Validação de direcionalidade e limites de profundidade.
       if (toPoint.dot(ray.direction) < 0)
         return false;
       
@@ -151,6 +152,6 @@ private:
   mat4 _transform;
   mat4 _inverse;
   mat3 _normalMatrix;
-}; // PBRActor
+};
 
-} // end namespace cg
+}
