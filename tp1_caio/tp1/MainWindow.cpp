@@ -19,12 +19,32 @@ MainWindow::initialize()
 {
   _scene = SceneBuilder::buildDefaultScene();
   auto camera = new Camera;
-  camera->setPosition({0, 0, 15});
+  
+  // Configurar câmera para orbitar em torno da origem (focal point fixo)
+  vec3f origin{0, 0, 0};
+  vec3f initialPos{0, 0, 15};
+  float dist = (initialPos - origin).length();
+  
+  // Definir posição e distância (o focal point será calculado automaticamente)
+  camera->setPosition(initialPos);
+  camera->setDistance(dist);
   camera->setClippingPlanes(0.1f, 100.0f);
   camera->setProjectionType(Camera::Perspective);
   camera->setViewAngle(45.0f);
   camera->setEulerAngles({0, 0, 0});
   camera->setAspectRatio((float)width() / (float)height());
+  
+  // Garantir que o focal point esteja na origem após configuração inicial
+  // O focal point é calculado como position - direction * distance
+  // Então precisamos ajustar para que fique na origem
+  vec3f currentFocal = camera->focalPoint();
+  if ((currentFocal - origin).length() > 0.1f)
+  {
+    // Ajustar posição para que o focal point fique na origem
+    vec3f direction = (origin - initialPos).versor();
+    vec3f newPos = origin - direction * dist;
+    camera->setPosition(newPos);
+  }
 
   // Criar renderer
   _renderer = new PBRRenderer{*_scene, *camera};
@@ -227,12 +247,28 @@ bool MainWindow::mouseMoveEvent(double xPos, double yPos)
 
         if (dx == 0 && dy == 0) return true;
 
-        // Botão Direito: Orbit (Girar câmera)
+        // Botão Direito: Orbit (Girar câmera em torno de ponto fixo na origem)
         if (_dragButton == GLFW_MOUSE_BUTTON_RIGHT)
         {
+            // Garantir que o focal point esteja na origem (ponto fixo de rotação)
+            vec3f origin{0, 0, 0};
+            vec3f currentFocal = cam->focalPoint();
+            float distToOrigin = (currentFocal - origin).length();
+            
+            // Se o focal point não estiver na origem, ajustar
+            if (distToOrigin > 0.1f)
+            {
+                // Calcular nova posição para que o focal point fique na origem
+                float currentDist = cam->distance();
+                vec3f direction = cam->directionOfProjection();
+                vec3f newPos = origin - direction * currentDist;
+                cam->setPosition(newPos);
+            }
+            
+            // Usar rotateYX com orbit=true para orbitar em torno do focal point
+            // Isso mantém o focal point fixo e move apenas a posição da câmera
             const float sensitivity = 0.5f;
-            cam->azimuth(-dx * sensitivity);
-            cam->elevation(-dy * sensitivity);
+            cam->rotateYX(-dx * sensitivity, -dy * sensitivity, true);
         }
         // Botão Meio: Pan
         else if (_dragButton == GLFW_MOUSE_BUTTON_MIDDLE)
