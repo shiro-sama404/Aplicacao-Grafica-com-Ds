@@ -9,27 +9,19 @@
 #pragma once
 
 #include "Shape3.h"
+#include "graphics/GLGraphics3.h"
 
 namespace cg
 { // begin namespace cg
 
 //
-// Cube: cubo (box)
+// Cube: cubo usando malha do GLGraphics3
 //
 class Cube: public Shape3
 {
 public:
   Cube(float size = 1.0f):
     _size{size}
-  {
-    generateMesh();
-  }
-
-  Cube(float width, float height, float depth):
-    _size{1.0f},
-    _width{width},
-    _height{height},
-    _depth{depth}
   {
     generateMesh();
   }
@@ -47,15 +39,13 @@ public:
     if (std::abs(absP.z - hs) < 0.001f)
       return vec3f{0, 0, P.z > 0 ? 1.0f : -1.0f};
     
-    // Fallback: normalizar P (aproximação)
+    // Fallback: normalizar P
     return P.versor();
   }
 
   bool intersect(const Ray3f& ray, float& distance) const override
   {
-    // Interseção raio-AABB (Axis-Aligned Bounding Box)
-    // Algoritmo slab method
-    
+    // Interseção raio-AABB (slab method)
     float hs = _size / 2.0f;
     vec3f minBounds{-hs, -hs, -hs};
     vec3f maxBounds{hs, hs, hs};
@@ -70,7 +60,6 @@ public:
     {
       if (std::abs(D[i]) < 1e-6f)
       {
-        // Raio paralelo ao slab
         if (O[i] < minBounds[i] || O[i] > maxBounds[i])
           return false;
       }
@@ -112,86 +101,22 @@ public:
 
 protected:
   float _size;
-  float _width, _height, _depth;
 
   void generateMesh() override
   {
-    // 1. DEFINIÇÃO DE TAMANHOS
-    // 6 faces * 4 vértices = 24 vértices (normais independentes por face)
-    // 6 faces * 2 triângulos = 12 triângulos
-    const int vertexCount = 24;
-    const int triangleCount = 12;
-
-    // 2. ALOCAÇÃO DIRETA
-    vec3f* vertices = new vec3f[vertexCount];
-    vec3f* normals = new vec3f[vertexCount];
-    vec2f* uvs = new vec2f;
-    TriangleMesh::Triangle* triangles = new TriangleMesh::Triangle[triangleCount];
-
-    float hs = _size / 2.0f;
-    int vIdx = 0;
-    int tIdx = 0;
-
-    // Função auxiliar para criar uma face
-    auto makeFace = [&](const vec3f& n, 
-                        const vec3f& v0, const vec3f& v1, 
-                        const vec3f& v2, const vec3f& v3) 
+    // Usar malha do GLGraphics3
+    _mesh = GLGraphics3::box();
+    
+    // Escalar para o tamanho desejado se necessário
+    if (_size != 1.0f)
     {
-        int base = vIdx;
-        
-        // Vértices e Normais
-        vertices[vIdx] = v0; normals[vIdx] = n; vIdx++;
-        vertices[vIdx] = v1; normals[vIdx] = n; vIdx++;
-        vertices[vIdx] = v2; normals[vIdx] = n; vIdx++;
-        vertices[vIdx] = v3; normals[vIdx] = n; vIdx++;
-
-        // Triângulos (preservando winding CCW: 0-1-2, 0-2-3)
-        triangles[tIdx].v[0] = base; 
-        triangles[tIdx].v[1] = base + 1; 
-        triangles[tIdx].v[2] = base + 2; 
-        tIdx++;
-
-        triangles[tIdx].v[0] = base; 
-        triangles[tIdx].v[1] = base + 2; 
-        triangles[tIdx].v[2] = base + 3; 
-        tIdx++;
-    };
-
-    // Face +Z (Front)
-    makeFace(vec3f{0, 0, 1}, 
-             vec3f{-hs, -hs, hs}, vec3f{hs, -hs, hs}, vec3f{hs, hs, hs}, vec3f{-hs, hs, hs});
-
-    // Face -Z (Back) - Ordem ajustada para normal apontar para fora
-    makeFace(vec3f{0, 0, -1}, 
-             vec3f{hs, -hs, -hs}, vec3f{-hs, -hs, -hs}, vec3f{-hs, hs, -hs}, vec3f{hs, hs, -hs});
-
-    // Face +X (Right)
-    makeFace(vec3f{1, 0, 0}, 
-             vec3f{hs, -hs, hs}, vec3f{hs, -hs, -hs}, vec3f{hs, hs, -hs}, vec3f{hs, hs, hs});
-
-    // Face -X (Left)
-    makeFace(vec3f{-1, 0, 0}, 
-             vec3f{-hs, -hs, -hs}, vec3f{-hs, -hs, hs}, vec3f{-hs, hs, hs}, vec3f{-hs, hs, -hs});
-
-    // Face +Y (Top)
-    makeFace(vec3f{0, 1, 0}, 
-             vec3f{-hs, hs, hs}, vec3f{hs, hs, hs}, vec3f{hs, hs, -hs}, vec3f{-hs, hs, -hs});
-
-    // Face -Y (Bottom)
-    makeFace(vec3f{0, -1, 0}, 
-             vec3f{-hs, -hs, -hs}, vec3f{hs, -hs, -hs}, vec3f{hs, -hs, hs}, vec3f{-hs, -hs, hs});
-
-    // 4. CRIAÇÃO DA MALHA
-    TriangleMesh::Data data = {
-      vertexCount,
-      triangleCount,
-      vertices,
-      normals,
-      uvs,
-      triangles
-    };
-
-    _mesh = new TriangleMesh{std::move(data)};
+      auto& data = _mesh->data();
+      for (int i = 0; i < data.vertexCount; ++i)
+      {
+        data.vertices[i] *= _size;
+        // Normais permanecem unitárias
+      }
+    }
   }
 
 }; // Cube
