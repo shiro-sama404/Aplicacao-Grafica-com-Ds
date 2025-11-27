@@ -10,7 +10,7 @@ namespace cg
 {
 
 // Classe container responsável pelo gerenciamento de entidades da cena (Atores e Luzes).
-class Scene
+class Scene : public SharedObject
 {
 public:
   Color backgroundColor;

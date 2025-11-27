@@ -1,5 +1,6 @@
 #pragma once
 
+#include "graphics/GLImage.h"
 #include "graphics/GLRenderWindow3.h"
 #include "PBRRenderer.h"
 #include "RayCaster.h"
@@ -19,6 +20,7 @@ public:
   MainWindow(int width, int height):
     GLRenderWindow3{"TP1 - PBR Renderer", width, height},
     _scene{nullptr},
+    _image{ nullptr },
     _renderer{nullptr},
     _gui{nullptr} 
   {
@@ -65,6 +67,9 @@ public:
 protected:
   // Inicializa o estado da aplicação, carrega a cena e configura os renderizadores OpenGL/CPU.
   void initialize() override;
+
+  // Atualiza o estado da aplicação.
+  void update() override;
   
   // Executa o ciclo de renderização do frame atual.
   void render() override;
@@ -76,11 +81,14 @@ protected:
   void terminate() override;
 
 private:
-  Scene* _scene;
+  Reference<Scene> _scene;
+  Reference<GLImage> _image;
   PBRRenderer* _renderer;   // Pipeline de Rasterização (OpenGL)
   RayCaster* _rayCaster;    // Pipeline de Ray Casting (CPU)
   GUIInitializer* _gui;
-  PBRActor* _selectedActor = nullptr;
+  Reference<PBRActor> _selectedActor = nullptr;
+  
+  uint32_t _cameraTimestamp = 0;
   
   bool _useRayCaster = false; // Flag de controle do renderizador ativo.
 
@@ -90,7 +98,6 @@ private:
   int _dragButton = -1;
   double _lastX = 0.0;
   double _lastY = 0.0;
-
 };
 
 }

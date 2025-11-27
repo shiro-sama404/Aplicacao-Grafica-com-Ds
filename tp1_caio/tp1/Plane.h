@@ -5,7 +5,6 @@
 namespace cg
 {
 
-// Representação de uma superfície plana finita definida no plano local XY.
 class Plane: public Shape3
 {
 public:

@@ -43,7 +43,7 @@ private:
       scene->addLight(light);
     }
     
-    // Luz de Preenchimento (Fill Light) - Tom quente, atenuação linear
+    // Luz de Preenchimento (Fill Light) - Vermelho linear
     {
       auto light = new Light{};
       light->setType(Light::Type::Point);
@@ -53,7 +53,7 @@ private:
       scene->addLight(light);
     }
     
-    // Luz de Recorte (Back Light) - Tom frio, atenuação linear
+    // Luz de Recorte (Back Light) - Azul linear
     {
       auto light = new Light{};
       light->setType(Light::Type::Point);
@@ -77,8 +77,6 @@ private:
     );
 
     auto actor = new PBRActor{"Floor", shape, material};
-    
-    // Rotação de -90 graus no eixo X para alinhar o plano horizontalmente.
     quatf rotation{-90.0f, vec3f{1.0f, 0.0f, 0.0f}};
     
     actor->setTransform(mat4f::TRS({0, 0, 0}, rotation, vec3f{1}));
@@ -93,9 +91,8 @@ private:
     const float zSpacing = 3.0f; 
     float startX = -5.0f;
 
-    // Ajuste de altura para que a base dos objetos toque o plano (Y=0).
     float sphereY = 1.0f;
-    float boxY = 1.0f; // Centro geométrico ajustado para o box de altura 1.5 ser posicionado corretamente.
+    float boxY = 1.0f;
 
     // Esferas Dielétricas
     addDielectricRow(scene, {startX, sphereY, -zSpacing * 1.5f}, xSpacing);

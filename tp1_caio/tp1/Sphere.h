@@ -10,7 +10,6 @@
 namespace cg
 {
 
-// Implementação da primitiva geométrica Esfera.
 class Sphere: public Shape3
 {
 public:

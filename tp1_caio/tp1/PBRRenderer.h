@@ -37,7 +37,6 @@ namespace cg
             const mat4f& transform,
             const mat3f& normalMatrix);
         
-        // Desenhar wireframe do objeto selecionado
         void drawSelectedActorWireframe(PBRActor* actor);
         
         // Definir ator selecionado para destacar

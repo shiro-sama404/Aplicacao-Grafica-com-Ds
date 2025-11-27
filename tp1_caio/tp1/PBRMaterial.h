@@ -7,7 +7,7 @@ namespace cg
 {
 
 // Estrutura de dados para representação de propriedades de materiais PBR (Physically Based Rendering).
-class PBRMaterial: public SharedObject
+class PBRMaterial : public SharedObject
 {
 public:
   Color Od;        // Componente de reflexão difusa (Albedo).

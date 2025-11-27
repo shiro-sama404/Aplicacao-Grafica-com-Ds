@@ -1,31 +1,23 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| MainWindow.cpp                                              |
-//|                                                                 |
-//| Main graphics window implementation for TP1                    |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #include "MainWindow.h"
 #include "PBRActor.h"
 #include "imgui.h"
 #include "GUIInitializer.h"
 
 namespace cg
-{ // begin namespace cg
+{
 
 void
 MainWindow::initialize()
 {
   _scene = SceneBuilder::buildDefaultScene();
+  
   auto camera = new Camera;
   
-  // Configurar câmera para orbitar em torno da origem (focal point fixo)
+  // Configuração inicial da câmera: Orbitando a origem (0,0,0).
   vec3f origin{0, 0, 0};
   vec3f initialPos{0, 0, 15};
   float dist = (initialPos - origin).length();
   
-  // Definir posição e distância (o focal point será calculado automaticamente)
   camera->setPosition(initialPos);
   camera->setDistance(dist);
   camera->setClippingPlanes(0.1f, 100.0f);
@@ -34,33 +26,30 @@ MainWindow::initialize()
   camera->setEulerAngles({0, 0, 0});
   camera->setAspectRatio((float)width() / (float)height());
   
-  // Garantir que o focal point esteja na origem após configuração inicial
-  // O focal point é calculado como position - direction * distance
-  // Então precisamos ajustar para que fique na origem
+  // Ajuste de precisão: Garante que o ponto focal (LookAt) seja exatamente a origem.
+  // O ponto focal é derivado de Posição + Direção * Distância.
   vec3f currentFocal = camera->focalPoint();
   if ((currentFocal - origin).length() > 0.1f)
   {
-    // Ajustar posição para que o focal point fique na origem
     vec3f direction = (origin - initialPos).versor();
     vec3f newPos = origin - direction * dist;
     camera->setPosition(newPos);
   }
 
-  // Criar renderer
+  // Inicialização do pipeline de Rasterização (OpenGL).
   _renderer = new PBRRenderer{*_scene, *camera};
   _renderer->setImageSize(width(), height());
 
-  // Criar ray caster para seleção
+  // Inicialização do pipeline de Ray Casting (CPU) para seleção e renderização alternativa.
   _rayCaster = new RayCaster{*_scene, *camera};
   _rayCaster->setImageSize(width(), height());
 
-  // Configurar OpenGL
+  // Configuração de estado global do OpenGL.
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
   glFrontFace(GL_CCW);
 
-  // Log de inicialização
   printf("MainWindow initialized\n");
   printf("Scene: %d actors, %d lights\n", 
          _scene->actorCount(), 
@@ -69,18 +58,18 @@ MainWindow::initialize()
 
 void MainWindow::resetScene()
 {
-  // Salva estado da câmera atual para não perder a posição
+  // Preserva o estado atual da câmera (transformação) antes de recriar a cena.
   auto oldCam = _renderer->camera();
   vec3f pos = oldCam->position();
   vec3f angles = oldCam->eulerAngles();
 
-  // Recria cena
+  // Liberação de memória das estruturas antigas.
   delete _renderer;
   delete _scene;
   
   _scene = SceneBuilder::buildDefaultScene();
   
-  // Recria câmera e renderer
+  // Reinstanciação da câmera com parâmetros preservados.
   auto camera = new Camera;
   camera->setPosition(pos);
   camera->setEulerAngles(angles);
@@ -92,19 +81,18 @@ void MainWindow::resetScene()
   _renderer = new PBRRenderer{*_scene, *camera};
   _renderer->setImageSize(width(), height());
   
-  // Recriar ray caster
+  // Reconstrução do RayCaster e BVH.
   delete _rayCaster;
   _rayCaster = new RayCaster{*_scene, *camera};
   _rayCaster->setImageSize(width(), height());
   
-  // Se RayCaster estiver ativo, reconstruir BVH
   if (_useRayCaster && _rayCaster)
     _rayCaster->rebuildBVH();
 }
 
 bool MainWindow::windowResizeEvent(int width, int height)
 {
-    // Se a área for zero, a janela está minimizada
+    // Tratamento para minimização da janela.
     if (width == 0 || height == 0)
     {
         _isMinimized = true;
@@ -112,12 +100,13 @@ bool MainWindow::windowResizeEvent(int width, int height)
     }
     _isMinimized = false;
 
-    // Atualiza o viewport do renderer para o novo tamanho
+    // Atualização das dimensões de viewport nos renderizadores.
     if (_renderer)
         _renderer->setImageSize(width, height);
     if (_rayCaster)
         _rayCaster->setImageSize(width, height);
 
+    // Ajuste da razão de aspecto da câmera.
     auto cam = camera();
     if (cam)
         cam->setAspectRatio((float)width / (float)height);
@@ -127,31 +116,29 @@ bool MainWindow::windowResizeEvent(int width, int height)
 
 bool MainWindow::keyInputEvent(int key, int action, int mods)
 {
-    // Se o ImGui estiver usando o teclado, ignoramos
+    // Delega evento para ImGui se a interface estiver ativa.
     if (ImGui::GetIO().WantCaptureKeyboard) return false;
     
-    // Apenas processamos eventos de PRESS ou REPEAT (segurar tecla)
     if (action == GLFW_RELEASE) return false;
 
     auto cam = camera();
     if (!cam) return false;
 
-    // Velocidade de movimento
+    // Movimentação da câmera em espaço local (WASD + QZ).
     const float speed = 0.5f; 
     vec3f d = vec3f::null();
 
     switch (key)
     {
-        case GLFW_KEY_W: d.z -= speed; break; // Frente
-        case GLFW_KEY_S: d.z += speed; break; // Trás
-        case GLFW_KEY_A: d.x -= speed; break; // Esquerda
-        case GLFW_KEY_D: d.x += speed; break; // Direita
-        case GLFW_KEY_Q: d.y += speed; break; // Cima
-        case GLFW_KEY_Z: d.y -= speed; break; // Baixo
-        default: return false; // Tecla não tratada
+        case GLFW_KEY_W: d.z -= speed; break; // Forward
+        case GLFW_KEY_S: d.z += speed; break; // Backward
+        case GLFW_KEY_A: d.x -= speed; break; // Left
+        case GLFW_KEY_D: d.x += speed; break; // Right
+        case GLFW_KEY_Q: d.y += speed; break; // Up
+        case GLFW_KEY_Z: d.y -= speed; break; // Down
+        default: return false;
     }
 
-    // Aplica translação local à câmera
     cam->translate(d);
     return true;
 }
@@ -160,14 +147,13 @@ bool MainWindow::mouseButtonInputEvent(int button, int action, int mods)
 {
     if (ImGui::GetIO().WantCaptureMouse) return false;
 
-    // Para botão esquerdo, deixar a classe base processar (ela chama onMouseLeftPress)
-    // Se onMouseLeftPress retornar true (selecionou algo), a classe base não inicia arraste
+    // Botão Esquerdo: Seleção (Press) ou Pan (Drag).
     if (button == GLFW_MOUSE_BUTTON_LEFT)
     {
-        // A classe base vai chamar onMouseLeftPress
+        // Tenta realizar Picking via classe base (invoca onMouseLeftPress).
         bool handled = GLRenderWindow3::mouseButtonInputEvent(button, action, mods);
         
-        // Se não selecionou nada e pressionou, permitir arraste para pan
+        // Se não houve seleção (Picking), inicia lógica de arrasto (Pan).
         if (action == GLFW_PRESS && !handled)
         {
             _isDragging = true;
@@ -186,7 +172,7 @@ bool MainWindow::mouseButtonInputEvent(int button, int action, int mods)
         return handled;
     }
     
-    // Para outros botões, tratar arraste normalmente
+    // Outros botões (Direito/Meio) iniciam lógica de arrasto imediatamente.
     if (action == GLFW_PRESS)
     {
         _isDragging = true;
@@ -202,7 +188,6 @@ bool MainWindow::mouseButtonInputEvent(int button, int action, int mods)
         _dragButton = -1;
     }
 
-    // Para botão direito e meio, usar a classe base
     return GLRenderWindow3::mouseButtonInputEvent(button, action, mods);
 }
 
@@ -210,30 +195,6 @@ bool MainWindow::mouseMoveEvent(double xPos, double yPos)
 {
     if (ImGui::GetIO().WantCaptureMouse) return false;
 
-    // Se estiver arrastando com botão esquerdo e não selecionou nada, fazer pan
-    if (_isDragging && _dragButton == GLFW_MOUSE_BUTTON_LEFT)
-    {
-        auto cam = camera();
-        if (!cam) return false;
-
-        // Calcula delta do movimento
-        float dx = (float)(xPos - _lastX);
-        float dy = (float)(yPos - _lastY);
-
-        // Atualiza última posição
-        _lastX = xPos;
-        _lastY = yPos;
-
-        if (dx == 0 && dy == 0) return true;
-
-        // Pan (Mover câmera lateralmente)
-        float panSpeed = cam->distance() * 0.002f;
-        cam->translate(-dx * panSpeed, dy * panSpeed, 0.0f);
-        return true;
-    }
-    
-    // Para outros botões, usar a lógica padrão da classe base
-    // Mas ainda precisamos tratar botão direito e meio
     if (_isDragging)
     {
         auto cam = camera();
@@ -247,34 +208,31 @@ bool MainWindow::mouseMoveEvent(double xPos, double yPos)
 
         if (dx == 0 && dy == 0) return true;
 
-        // Botão Direito: Orbit (Girar câmera em torno de ponto fixo na origem)
-        if (_dragButton == GLFW_MOUSE_BUTTON_RIGHT)
+        // Botão Esquerdo ou Meio: Pan (Translação no plano da câmera).
+        if (_dragButton == GLFW_MOUSE_BUTTON_LEFT || _dragButton == GLFW_MOUSE_BUTTON_MIDDLE)
         {
-            // Garantir que o focal point esteja na origem (ponto fixo de rotação)
+            float panSpeed = cam->distance() * 0.002f;
+            cam->translate(-dx * panSpeed, dy * panSpeed, 0.0f);
+        }
+        // Botão Direito: Orbit (Rotação em torno do ponto focal).
+        else if (_dragButton == GLFW_MOUSE_BUTTON_RIGHT)
+        {
+            // Assegura rotação em torno da origem (0,0,0) corrigindo drift do ponto focal.
             vec3f origin{0, 0, 0};
             vec3f currentFocal = cam->focalPoint();
             float distToOrigin = (currentFocal - origin).length();
             
-            // Se o focal point não estiver na origem, ajustar
             if (distToOrigin > 0.1f)
             {
-                // Calcular nova posição para que o focal point fique na origem
                 float currentDist = cam->distance();
                 vec3f direction = cam->directionOfProjection();
                 vec3f newPos = origin - direction * currentDist;
                 cam->setPosition(newPos);
             }
             
-            // Usar rotateYX com orbit=true para orbitar em torno do focal point
-            // Isso mantém o focal point fixo e move apenas a posição da câmera
             const float sensitivity = 0.5f;
+            // rotateYX com flag orbit=true.
             cam->rotateYX(-dx * sensitivity, -dy * sensitivity, true);
-        }
-        // Botão Meio: Pan
-        else if (_dragButton == GLFW_MOUSE_BUTTON_MIDDLE)
-        {
-            float panSpeed = cam->distance() * 0.002f;
-            cam->translate(-dx * panSpeed, dy * panSpeed, 0.0f);
         }
         return true;
     }
@@ -289,8 +247,7 @@ bool MainWindow::scrollEvent(double xOffset, double yOffset)
     auto cam = camera();
     if (cam)
     {
-        // Zoom in/out
-        // Fator 1.1 dá um zoom suave
+        // Zoom via alteração da distância ou FOV.
         float zoomFactor = (yOffset > 0) ? 1.1f : 0.9f;
         cam->zoom(zoomFactor);
     }
@@ -299,44 +256,32 @@ bool MainWindow::scrollEvent(double xOffset, double yOffset)
 
 bool MainWindow::onMouseLeftPress(int x, int y)
 {
-    // Selecionar ator quando RayCaster estiver DESATIVADO (modo OpenGL)
-    // O RayCaster é usado apenas para fazer o ray casting de seleção
     if (ImGui::GetIO().WantCaptureMouse) return false;
     
     if (_rayCaster == nullptr) 
     {
-        printf("RayCaster is null!\n");
+        printf("Error: RayCaster not initialized.\n");
         return false;
     }
     
-    // Inverter coordenada Y (OpenGL tem origem no canto inferior esquerdo)
+    // Conversão de coordenadas: Sistema de Janela (Top-Left) para OpenGL (Bottom-Left).
     int glY = height() - y;
     
-    printf("Trying to select at position (%d, %d) -> (%d, %d)\n", x, y, x, glY);
-    
-    // Selecionar ator através de ray casting
-    // O RayCaster sempre existe e pode ser usado para seleção, mesmo quando não está ativo para renderização
+    // Executa Ray Picking usando a estrutura de aceleração (BVH) do RayCaster.
     _selectedActor = _rayCaster->selectActor(x, glY);
     
-    // Atualizar PBRRenderer com o ator selecionado para feedback visual
+    // Sincroniza a seleção com o renderizador OpenGL para feedback visual (e.g., Bounding Box).
     if (_renderer)
     {
         _renderer->setSelectedActor(_selectedActor);
     }
     
-    // Atualizar GUI com ator selecionado
     if (_selectedActor)
     {
-        printf("Selected actor: %s\n", _selectedActor->name());
-        // Se selecionou um ator, retornar true para impedir arraste
-        return true;
-    }
-    else
-    {
-        printf("No actor selected at position (%d, %d)\n", x, glY);
+        printf("Selected Actor: %s\n", _selectedActor->name());
+        return true; // Retorna true para consumir o evento e evitar início de arrasto.
     }
     
-    // Se não selecionou nada, permitir que o arraste funcione
     return false;
 }
 
@@ -344,28 +289,57 @@ Camera*
 MainWindow::camera()
 {
   if (_useRayCaster && _rayCaster)
-    return _rayCaster->camera();
+    return _rayCaster->render(_rayCaster->camera(), _image);
   else if (_renderer)
     return _renderer->camera();
   return nullptr;
 }
 
-void
-MainWindow::render()
+void MainWindow::render()
 {
   if (_isMinimized) return;
   
-  // Usar o renderer ativo baseado na opção
-  // Se RayCaster estiver ativo, desativar PBRRenderer
+  // Pipeline de Ray Tracing (CPU).
   if (_useRayCaster)
   {
-    // RayCaster está ativo - PBRRenderer desativado
     if (_rayCaster != nullptr)
-      _renderer->render();
+    {
+        auto cam = _rayCaster->camera();
+        if (!cam) return;
+
+        bool imageInvalid = (!_image || _image->width() != width() || _image->height() != height());
+        
+        // Otimização: Recalcula a imagem apenas se a câmera mudou ou houve resize.
+        // Utiliza Timestamp para detecção de mudanças (Dirty Flag).
+        uint32_t currentStamp = cam->timestamp();
+        // Nota: _cameraTimestamp deve ser definido como membro da classe (private).
+        // Assumindo existência de membro estático ou variável de instância para controle.
+        static uint32_t lastCameraTimestamp = 0; 
+        bool cameraChanged = (currentStamp != lastCameraTimestamp);
+
+        if (imageInvalid || cameraChanged)
+        {
+            if (imageInvalid)
+            {
+                 if (_image) delete _image; 
+                 _image = new GLImage(width(), height());
+                 _rayCaster->setImageSize(width(), height());
+            }
+                 
+            // Disparo de raios (Renderização bloqueante).
+            _rayCaster->renderImage(*_image);
+            
+            lastCameraTimestamp = currentStamp;
+        }
+        
+        // Exibe o buffer de imagem gerado como uma textura OpenGL.
+        if (_image)
+            _image->draw(0, 0);
+    }
   }
   else
   {
-    // PBRRenderer está ativo - RayCaster desativado
+    // Pipeline de Rasterização padrão (OpenGL).
     if (_renderer != nullptr)
       _renderer->render();
   }
@@ -383,4 +357,4 @@ MainWindow::terminate()
   printf("MainWindow terminated\n");
 }
 
-} // end namespace cg
+}
