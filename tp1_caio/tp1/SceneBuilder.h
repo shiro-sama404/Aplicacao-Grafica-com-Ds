@@ -25,21 +25,18 @@ namespace cg
 class SceneBuilder
 {
 public:
-  // Criar cena com configuração padrão do TP1
-  // - 10 esferas (5 dielétricos + 5 metais)
-  // - 3 luzes pontuais
-  // - Disposição em duas fileiras
   static Scene* buildDefaultScene()
   {
     auto scene = new Scene{"TP1 PBR Scene"};
     
     // Configurar cor de fundo
-    scene->backgroundColor = Color::black;
+    scene->backgroundColor = Color::gray;
     
-    // Adicionar luzes pontuais
+    // Adicionar luzes
     addLights(scene);
     
-    // Adicionar atores (esferas)
+    // Adicionar chão e atores
+    addFloor(scene);
     addActors(scene);
     
     return scene;
@@ -48,155 +45,186 @@ public:
 private:
   static void addLights(Scene* scene)
   {
-    // Luz 1: Frontal superior esquerda (branca)
+    // Ajustei levemente as luzes para iluminar melhor a área horizontal
+    
+    // Luz 1: Principal (Branca)
     {
       auto light = new Light{};
       light->setType(Light::Type::Point);
-      light->setPosition({-5, 5, 5});
+      light->setPosition({5, 10, -20});
       light->color = Color::white;
-      light->falloff = Light::Falloff::Quadratic;
+      light->falloff = Light::Falloff::Constant;
       scene->addLight(light);
     }
     
-    // Luz 2: Frontal superior direita (amarelada)
+    // Luz 2: Fill Light (Quente)
     {
       auto light = new Light{};
       light->setType(Light::Type::Point);
-      light->setPosition({5, 5, 5});
-      light->color = Color{1.0f, 0.95f, 0.8f}; // Luz quente
-      light->falloff = Light::Falloff::Quadratic;
+      light->setPosition({10, 10, 0});
+      light->color = Color{1.0f, 0.0f, 0.0f};
+      light->falloff = Light::Falloff::Linear;
       scene->addLight(light);
     }
     
-    // Luz 3: Posterior (azulada)
+    // Luz 3: Back Light (Fria/Azulada)
     {
       auto light = new Light{};
       light->setType(Light::Type::Point);
-      light->setPosition({0, 3, -8});
-      light->color = Color{0.7f, 0.8f, 1.0f}; // Luz fria
-      light->falloff = Light::Falloff::Quadratic;
+      light->setPosition({-10, 20, 10});
+      light->color = Color{0.0f, 0.0f, 1.0f}; 
+      light->falloff = Light::Falloff::Linear;
       scene->addLight(light);
     }
+  }
+
+  static void addFloor(Scene* scene)
+  {
+    // Cria plano 25x25 (Originalmente em pé no XY)
+    auto shape = new Plane{25.0f, 25.0f};
+    
+    auto material = new PBRMaterial(
+        Color{0.2f, 0.2f, 0.2f}, 
+        Color{0.1f, 0.1f, 0.1f}, 
+        0.6f,                    
+        0.0f                     
+    );
+
+    auto actor = new PBRActor{"Floor", shape, material};
+    
+    // USANDO SEU QUATERNION.H:
+    // Rotação de -90 graus no eixo X (vec3f{1,0,0})
+    // O construtor é: Quaternion(real angle, const vec3& axis)
+    quatf rotation{-90.0f, vec3f{1.0f, 0.0f, 0.0f}};
+    
+    actor->setTransform(mat4f::TRS({0, 0, 0}, rotation, vec3f{1}));
+    
+    scene->addActor(actor);
   }
   
   static void addActors(Scene* scene)
   {
-    const float spacing = 2.5f; // Espaçamento entre objetos
-    const float rowOffset = 2.5f; // Distância vertical entre fileiras
+    const float xSpacing = 2.5f; 
+    const float zSpacing = 3.0f; 
     
-    // Fileira superior: 5 Dielétricos com rugosidades variadas (esferas)
-    addDielectricRow(scene, {-5.0f, rowOffset, 0}, spacing);
+    // Posição X inicial para centralizar as fileiras
+    float startX = -5.0f;
+
+    // --- CÁLCULO DAS ELEVAÇÕES (Y) ---
     
-    // Fileira do meio: 5 Boxes com materiais variados
-    addBoxRow(scene, {-5.0f, 0, 0}, spacing);
+    // Esfera (Raio 1.0): O centro deve estar em 1.0 para a base tocar o zero.
+    // Usamos 1.0f cravado (ou 1.01f se quiser garantir que não haja z-fighting com o chão)
+    float sphereY = 1.0f;
+
+    // Box (Tamanho 1.5): A altura total é 1.5, logo a metade é 0.75.
+    // O centro deve estar em 0.75 para a base tocar o zero.
+    float boxY = 1.0f;
+
+    // --- CRIAÇÃO DAS FILEIRAS ---
+
+    // 1. Fundo: Esferas Dielétricas
+    addDielectricRow(scene, {startX, sphereY, -zSpacing * 1.5f}, xSpacing);
     
-    // Fileira inferior: 5 Metais com rugosidades variadas (esferas)
-    addMetalRow(scene, {-5.0f, -rowOffset, 0}, spacing);
+    // 2. Meio-Fundo: Boxes Mistos
+    addBoxRow(scene, {startX, boxY, -zSpacing * 0.5f}, xSpacing);
+    
+    // 3. Meio-Frente: Esferas Metálicas
+    addMetalRow(scene, {startX, sphereY, zSpacing * 0.5f}, xSpacing);
+
+    // 4. Frente: Boxes Metálicos
+    addMetalBoxRow(scene, {startX, boxY, zSpacing * 1.5f}, xSpacing);
   }
   
-  static void addDielectricRow(Scene* scene, 
-                                const vec3f& startPos,
-                                float spacing)
+  static void addDielectricRow(Scene* scene, const vec3f& startPos, float spacing)
   {
-    // Cores para dielétricos
     Color colors[] = {
-      Color{0.8f, 0.2f, 0.2f},  // Vermelho
-      Color{0.2f, 0.8f, 0.2f},  // Verde
-      Color{0.2f, 0.2f, 0.8f},  // Azul
-      Color{0.8f, 0.8f, 0.2f},  // Amarelo
-      Color{0.8f, 0.2f, 0.8f}   // Magenta
+      Color{0.8f, 0.2f, 0.2f}, Color{0.2f, 0.8f, 0.2f}, Color{0.2f, 0.2f, 0.8f},
+      Color{0.8f, 0.8f, 0.2f}, Color{0.8f, 0.2f, 0.8f}
     };
-    
     float roughnesses[] = {0.1f, 0.3f, 0.5f, 0.7f, 0.9f};
     
     for(int i = 0; i < 5; ++i)
     {
       vec3f position = startPos + vec3f{i * spacing, 0, 0};
-      
+      // Alocação segura (Heap)
       auto material = PBRMaterial::dielectric(colors[i], roughnesses[i]);
-      
-      // Criar shape (esfera)
-      auto shape = new Sphere{1.0f, 3}; // raio=1, subdiv=3
+      auto shape = new Sphere{1.0f, 3};
       
       char name[32];
       snprintf(name, 32, "Dielectric_%d", i);
       
       auto actor = new PBRActor{name, shape, material};
       actor->setTransform(mat4f::TRS(position, quatf::identity(), vec3f{1}));
-      
       scene->addActor(actor);
     }
   }
   
-  static void addMetalRow(Scene* scene,
-                          const vec3f& startPos,
-                          float spacing)
+  static void addMetalRow(Scene* scene, const vec3f& startPos, float spacing)
   {
     float roughnesses[] = {0.1f, 0.3f, 0.5f, 0.7f, 0.9f};
-    
-    // Metais: cobre, alumínio, prata, titânio, ouro
-    PBRMaterial materials[] = {
-      PBRMaterial::copper(roughnesses[0]),
-      PBRMaterial::aluminum(roughnesses[1]),
-      PBRMaterial::silver(roughnesses[2]),
-      PBRMaterial::titanium(roughnesses[3]),
+    PBRMaterial* materials[] = {
+      PBRMaterial::copper(roughnesses[0]), PBRMaterial::aluminum(roughnesses[1]),
+      PBRMaterial::silver(roughnesses[2]), PBRMaterial::titanium(roughnesses[3]),
       PBRMaterial::gold(roughnesses[4])
     };
-    
-    const char* names[] = {
-      "Copper", "Aluminum", "Silver", "Titanium", "Gold"
-    };
+    const char* names[] = { "Copper", "Aluminum", "Silver", "Titanium", "Gold" };
     
     for(int i = 0; i < 5; ++i)
     {
       vec3f position = startPos + vec3f{i * spacing, 0, 0};
-      
-      // Criar shape (esfera)
-      auto shape = new Sphere{1.0f, 3}; // raio=1, subdiv=3
-      
+      auto shape = new Sphere{1.0f, 3};
       auto actor = new PBRActor{names[i], shape, materials[i]};
       actor->setTransform(mat4f::TRS(position, quatf::identity(), vec3f{1}));
-      
       scene->addActor(actor);
     }
   }
   
-  static void addBoxRow(Scene* scene,
-                        const vec3f& startPos,
-                        float spacing)
+  static void addBoxRow(Scene* scene, const vec3f& startPos, float spacing)
   {
-    // Cores para boxes
     Color colors[] = {
-      Color{0.9f, 0.1f, 0.1f},  // Vermelho
-      Color{0.1f, 0.9f, 0.1f},  // Verde
-      Color{0.1f, 0.1f, 0.9f},  // Azul
-      Color{0.9f, 0.9f, 0.1f},  // Amarelo
-      Color{0.9f, 0.1f, 0.9f}   // Magenta
+      Color{0.9f, 0.1f, 0.1f}, Color{0.1f, 0.9f, 0.1f}, Color{0.1f, 0.1f, 0.9f},
+      Color{0.9f, 0.9f, 0.1f}, Color{0.9f, 0.1f, 0.9f}
     };
-    
     float roughnesses[] = {0.2f, 0.4f, 0.6f, 0.8f, 1.0f};
     float metalness[] = {0.0f, 0.2f, 0.5f, 0.8f, 1.0f};
     
     for(int i = 0; i < 5; ++i)
     {
       vec3f position = startPos + vec3f{i * spacing, 0, 0};
+      // CORREÇÃO: Alocação na Heap
+      auto material = new PBRMaterial(
+          colors[i], 
+          Color{0.04f, 0.04f, 0.04f} * (1.0f - metalness[i]) + colors[i] * metalness[i],
+          roughnesses[i],
+          metalness[i]
+      );
       
-      // Criar material misto (dielétrico com metalness variável)
-      PBRMaterial material(colors[i], 
-                          Color{0.04f, 0.04f, 0.04f} * (1.0f - metalness[i]) + 
-                          colors[i] * metalness[i],
-                          roughnesses[i],
-                          metalness[i]);
-      
-      // Criar shape (box)
-      auto shape = new Box{1.5f}; // tamanho=1.5
-      
+      auto shape = new Box{1.5f};
       char name[32];
-      snprintf(name, 32, "Box_%d", i);
+      snprintf(name, 32, "Box_Mixed_%d", i);
       
       auto actor = new PBRActor{name, shape, material};
       actor->setTransform(mat4f::TRS(position, quatf::identity(), vec3f{1}));
-      
+      scene->addActor(actor);
+    }
+  }
+
+  static void addMetalBoxRow(Scene* scene, const vec3f& startPos, float spacing)
+  {
+    float roughnesses[] = {0.1f, 0.3f, 0.5f, 0.7f, 0.9f};
+    PBRMaterial* materials[] = {
+      PBRMaterial::copper(roughnesses[0]), PBRMaterial::aluminum(roughnesses[1]),
+      PBRMaterial::silver(roughnesses[2]), PBRMaterial::titanium(roughnesses[3]),
+      PBRMaterial::gold(roughnesses[4])
+    };
+    const char* names[] = { "Box_Copper", "Box_Aluminum", "Box_Silver", "Box_Titanium", "Box_Gold" };
+    
+    for(int i = 0; i < 5; ++i)
+    {
+      vec3f position = startPos + vec3f{i * spacing, 0, 0};
+      auto shape = new Box{1.5f};
+      auto actor = new PBRActor{names[i], shape, materials[i]};
+      actor->setTransform(mat4f::TRS(position, quatf::identity(), vec3f{1}));
       scene->addActor(actor);
     }
   }

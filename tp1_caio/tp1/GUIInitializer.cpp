@@ -74,13 +74,13 @@ namespace cg {
 
         ImGui::Text("Scene: %s", scene->name());
         ImGui::Text("Actors: %d | Lights: %d", scene->actorCount(), scene->lightCount());
-        
+
         // Mostrar informação sobre BVH se RayCaster estiver ativo
         if (_window.useRayCaster() && _window.rayCaster())
         {
             ImGui::Text("BVH: Active (RayCaster)");
         }
-
+        
         // Background Color
         float bg[3] = { scene->backgroundColor.r, scene->backgroundColor.g, scene->backgroundColor.b };
         if (ImGui::ColorEdit3("Background", bg))
@@ -193,20 +193,20 @@ namespace cg {
         ImGui::Separator();
         
         // USANDO A MELHORIA DE REFERÊNCIA DIRETA
-        PBRMaterial& mat = actor->pbrMaterial();
+        PBRMaterial* mat = actor->pbrMaterial();
 
-        float od[3] = { mat.Od.r, mat.Od.g, mat.Od.b };
-        if (ImGui::ColorEdit3("Albedo (Od)", od)) mat.Od = Color(od[0], od[1], od[2]);
+        float od[3] = { mat->Od.r, mat->Od.g, mat->Od.b };
+        if (ImGui::ColorEdit3("Albedo (Od)", od)) mat->Od = Color(od[0], od[1], od[2]);
 
-        float os[3] = { mat.Os.r, mat.Os.g, mat.Os.b };
-        if (ImGui::ColorEdit3("F0 (Os)", os)) mat.Os = Color(os[0], os[1], os[2]);
+        float os[3] = { mat->Os.r, mat->Os.g, mat->Os.b };
+        if (ImGui::ColorEdit3("F0 (Os)", os)) mat->Os = Color(os[0], os[1], os[2]);
 
-        ImGui::SliderFloat("Roughness", &mat.roughness, 0.01f, 1.0f);
-        ImGui::SliderFloat("Metallic", &mat.metalness, 0.0f, 1.0f);
+        ImGui::SliderFloat("Roughness", &mat->roughness, 0.01f, 1.0f);
+        ImGui::SliderFloat("Metallic", &mat->metalness, 0.0f, 1.0f);
 
         // Presets
         ImGui::Separator();
-        float r = mat.roughness;
+        float r = mat->roughness;
         if (ImGui::Button("Gold")) actor->setPBRMaterial(PBRMaterial::gold(r));
         ImGui::SameLine();
         if (ImGui::Button("Plastic")) actor->setPBRMaterial(PBRMaterial::dielectric(Color(1,0,0), r));
@@ -273,23 +273,23 @@ namespace cg {
         // Propriedades de material
         if (ImGui::CollapsingHeader("Material Properties", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            PBRMaterial& mat = actor->pbrMaterial();
+            PBRMaterial* mat = actor->pbrMaterial();
             
-            float od[3] = { mat.Od.r, mat.Od.g, mat.Od.b };
+            float od[3] = { mat->Od.r, mat->Od.g, mat->Od.b };
             if (ImGui::ColorEdit3("Albedo (Od)", od))
-                mat.Od = Color(od[0], od[1], od[2]);
+                mat->Od = Color(od[0], od[1], od[2]);
             
-            float os[3] = { mat.Os.r, mat.Os.g, mat.Os.b };
+            float os[3] = { mat->Os.r, mat->Os.g, mat->Os.b };
             if (ImGui::ColorEdit3("F0 (Os)", os))
-                mat.Os = Color(os[0], os[1], os[2]);
+                mat->Os = Color(os[0], os[1], os[2]);
             
-            ImGui::SliderFloat("Roughness", &mat.roughness, 0.01f, 1.0f);
-            ImGui::SliderFloat("Metalness", &mat.metalness, 0.0f, 1.0f);
+            ImGui::SliderFloat("Roughness", &mat->roughness, 0.01f, 1.0f);
+            ImGui::SliderFloat("Metalness", &mat->metalness, 0.0f, 1.0f);
             
             // Presets
             ImGui::Separator();
             ImGui::Text("Presets:");
-            float r = mat.roughness;
+            float r = mat->roughness;
             if (ImGui::Button("Gold")) actor->setPBRMaterial(PBRMaterial::gold(r));
             ImGui::SameLine();
             if (ImGui::Button("Silver")) actor->setPBRMaterial(PBRMaterial::silver(r));

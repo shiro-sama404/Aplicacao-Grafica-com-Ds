@@ -35,7 +35,7 @@ public:
   (
     const std::string& actorName, 
     Shape3* shape,
-    const PBRMaterial& material
+    PBRMaterial*  material
   ):
     _name{actorName},
     _shape{shape},
@@ -73,9 +73,9 @@ public:
   const mat3& normalMatrix() const { return _normalMatrix; }
 
   // Material PBR
-  const PBRMaterial& pbrMaterial() const { return _material; }
-  PBRMaterial& pbrMaterial() { return _material; }
-  void setPBRMaterial(const PBRMaterial& material) { _material = material; }
+  const PBRMaterial* pbrMaterial() const { return _material; }
+  PBRMaterial* pbrMaterial() { return _material; }
+  void setPBRMaterial(PBRMaterial* material) { _material = material; }
 
   // Métodos para BVH
   Bounds3f bounds() const
@@ -92,9 +92,19 @@ public:
 
   bool intersect(const Ray3f& ray) const
   {
-    Intersection temp;
-    temp.distance = ray.tMax;
-    return intersect(ray, temp);
+    if (_shape == nullptr)
+      return false;
+    
+    // Transformar raio para espaço local
+    const auto& invTransform = _inverse;
+    Ray3f localRay;
+    localRay.origin = invTransform.transform3x4(ray.origin);
+    localRay.direction = invTransform.transformVector(ray.direction).versor();
+    localRay.tMin = ray.tMin;
+    localRay.tMax = ray.tMax;
+    
+    float distance = ray.tMax;
+    return _shape->intersect(localRay, distance);
   }
 
   bool intersect(const Ray3f& ray, Intersection& hit) const
@@ -137,7 +147,7 @@ public:
 private:
   std::string _name;
   Reference<Shape3> _shape;
-  PBRMaterial _material;
+  Reference<PBRMaterial> _material;
   mat4 _transform;
   mat4 _inverse;
   mat3 _normalMatrix;
