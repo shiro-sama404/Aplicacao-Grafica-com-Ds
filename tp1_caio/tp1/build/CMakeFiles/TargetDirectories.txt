@@ -1,0 +1,5 @@
+C:/Users/caiok/ds puro - Copia/apps/tp1/build/CMakeFiles/tp1.dir
+C:/Users/caiok/ds puro - Copia/apps/tp1/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/caiok/ds puro - Copia/apps/tp1/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/caiok/ds puro - Copia/apps/tp1/build/cg_build/CMakeFiles/cg.dir
+C:/Users/caiok/ds puro - Copia/apps/tp1/build/cg_build/CMakeFiles/ALL_BUILD.dir
