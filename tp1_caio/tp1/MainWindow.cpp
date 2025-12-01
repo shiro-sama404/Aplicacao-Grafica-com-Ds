@@ -56,6 +56,12 @@ MainWindow::initialize()
          _scene->lightCount());
 }
 
+void MainWindow::update()
+{
+  // Atualização do estado da aplicação (se necessário).
+  // Por enquanto, vazio - pode ser usado para animações ou lógica de atualização.
+}
+
 void MainWindow::resetScene()
 {
   // Preserva o estado atual da câmera (transformação) antes de recriar a cena.
@@ -289,7 +295,7 @@ Camera*
 MainWindow::camera()
 {
   if (_useRayCaster && _rayCaster)
-    return _rayCaster->render(_rayCaster->camera(), _image);
+    return _rayCaster->camera();
   else if (_renderer)
     return _renderer->camera();
   return nullptr;
