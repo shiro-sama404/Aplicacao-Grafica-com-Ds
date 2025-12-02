@@ -1,11 +1,3 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| Scene.h                                                         |
-//|                                                                 |
-//| Simple scene class for TP1                                     |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #pragma once
 
 #include "graphics/Color.h"
@@ -15,12 +7,10 @@
 #include <string>
 
 namespace cg
-{ // begin namespace cg
+{
 
-//
-// Scene: cena simples com atores e luzes
-//
-class Scene
+// Classe container responsável pelo gerenciamento de entidades da cena (Atores e Luzes).
+class Scene : public SharedObject
 {
 public:
   Color backgroundColor;
@@ -29,21 +19,18 @@ public:
     _name{name},
     backgroundColor{Color::black}
   {
-    // do nothing
   }
 
   ~Scene()
   {
-    // Limpar atores
+    // Liberação de memória dos atores e luzes alocados.
     for (auto actor : _actors)
       delete actor;
     
-    // Limpar luzes
     for (auto light : _lights)
       delete light;
   }
 
-  // Nome da cena
   const char* name() const
   {
     return _name.c_str();
@@ -54,7 +41,8 @@ public:
     _name = name;
   }
 
-  // Gerenciamento de atores
+  // --- Gerenciamento de Atores (Geometria) ---
+
   void addActor(PBRActor* actor)
   {
     if (actor != nullptr)
@@ -86,7 +74,8 @@ public:
     return nullptr;
   }
 
-  // Gerenciamento de luzes
+  // --- Gerenciamento de Iluminação ---
+
   void addLight(Light* light)
   {
     if (light != nullptr)
@@ -118,7 +107,7 @@ public:
     return nullptr;
   }
 
-  // Limpar cena
+  // Reseta a cena, removendo e desalocando todos os objetos contidos.
   void clear()
   {
     for (auto actor : _actors)
@@ -135,6 +124,6 @@ private:
   std::vector<PBRActor*> _actors;
   std::vector<Light*> _lights;
 
-}; // Scene
+};
 
-} // end namespace cg
+}

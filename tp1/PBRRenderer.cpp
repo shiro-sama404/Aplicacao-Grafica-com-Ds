@@ -1,15 +1,7 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| PBRRenderer.cpp                                                 |
-//|                                                                 |
-//| Physically-Based Rendering renderer for TP1                     |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #include "PBRRenderer.h"
 #include "PBRActor.h"
-// IMPORTANTE: Necessário para GLSL::Program e para a função glMesh()
-#include "graphics/GLGraphics3.h" 
+#include "graphics/GLGraphics3.h"
+#include "graphics/Color.h" 
 
 // Macro para converter código GLSL em string C++
 #define STRINGIFY(A) "#version 400\n"#A
@@ -131,7 +123,12 @@ static const char* pbrFragmentShader = STRINGIFY(
   
   void main() {
     vec3 color = calculatePBR(vPosition, vNormal);
-    color = color / (color + vec3(1.0)); // Tone mapping
+    
+    // clamp
+    if(color.r > 1.0) color.r = 1.0;
+    if(color.g > 1.0) color.g = 1.0;
+    if(color.b > 1.0) color.b = 1.0;
+
     color = pow(color, vec3(1.0/2.2));   // Gamma
     fragmentColor = vec4(color, 1.0);
   }
@@ -255,11 +252,11 @@ void PBRRenderer::renderActors()
     auto shape = actor->shape();
     if(shape == nullptr) continue;
     
-    const auto& mesh = shape->mesh(); 
+    const auto mesh = shape->mesh(); 
     if(mesh)
     {
       drawMeshPBR(*mesh, 
-                  actor->pbrMaterial(), 
+                  *actor->pbrMaterial(), 
                   actor->transform(),   
                   actor->normalMatrix() 
       );
@@ -311,5 +308,53 @@ void PBRRenderer::render()
   beginRender();
   renderLights();
   renderActors();
+  
+  // Desenhar wireframe do objeto selecionado
+  if (_selectedActor != nullptr && _selectedActor->isVisible())
+  {
+    drawSelectedActorWireframe(_selectedActor);
+  }
+  
   endRender();
+}
+
+void PBRRenderer::drawSelectedActorWireframe(PBRActor* actor)
+{
+  if (actor == nullptr) return;
+  
+  auto shape = actor->shape();
+  if (shape == nullptr) return;
+  
+  const auto& mesh = shape->mesh();
+  if (mesh == nullptr) return;
+  
+  // Salvar estado atual do OpenGL
+  GLint oldPolygonMode[2];
+  glGetIntegerv(GL_POLYGON_MODE, oldPolygonMode);
+  GLfloat oldLineWidth;
+  glGetFloatv(GL_LINE_WIDTH, &oldLineWidth);
+  
+  // Desenhar wireframe em amarelo brilhante
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glLineWidth(3.0f);
+  glDepthFunc(GL_LEQUAL); // Permitir desenhar sobre o objeto
+  
+  // Criar um material temporário amarelo brilhante para wireframe (tipo marca-texto)
+  PBRMaterial wireframeMaterial;
+  wireframeMaterial.Od = Color{1.0f, 0.95f, 0.0f}; // Amarelo saturado tipo marca-texto
+  wireframeMaterial.Os = Color{1.0f, 0.95f, 0.0f};
+  wireframeMaterial.roughness = 0.0f;
+  wireframeMaterial.metalness = 0.0f;
+  
+  // Desenhar mesh em wireframe
+  drawMeshPBR(*mesh, 
+              wireframeMaterial,
+              actor->transform(),
+              actor->normalMatrix());
+  
+  // Restaurar estado
+  glPolygonMode(GL_FRONT, oldPolygonMode[0]);
+  glPolygonMode(GL_BACK, oldPolygonMode[1]);
+  glLineWidth(oldLineWidth);
+  glDepthFunc(GL_LESS);
 }

@@ -1,11 +1,3 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| SceneBuilder.h                                                  |
-//|                                                                 |
-//| Scene builder helper for TP1                                   |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #pragma once
 
 #include "Scene.h"
@@ -14,95 +6,114 @@
 #include "Sphere.h"
 #include "Plane.h"
 #include "Cube.h"
+#include "Box.h"
 
 namespace cg
-{ // begin namespace cg
+{
 
-//
-// SceneBuilder: helper para construir a cena do trabalho
-//
+// Classe utilitária estática para construção e população da cena padrão.
 class SceneBuilder
 {
 public:
-  // Criar cena com configuração padrão do TP1
-  // - 10 esferas (5 dielétricos + 5 metais)
-  // - 3 luzes pontuais
-  // - Disposição em duas fileiras
+  // Inicializa a cena principal com iluminação e geometria de teste PBR.
   static Scene* buildDefaultScene()
   {
     auto scene = new Scene{"TP1 PBR Scene"};
     
-    // Configurar cor de fundo
-    scene->backgroundColor = Color::black;
+    scene->backgroundColor = Color::gray;
     
-    // Adicionar luzes pontuais
     addLights(scene);
-    
-    // Adicionar atores (esferas)
+    addFloor(scene);
     addActors(scene);
     
     return scene;
   }
 
 private:
+  // Configura um sistema de iluminação de três pontos (Key, Fill, Back lights).
   static void addLights(Scene* scene)
   {
-    // Luz 1: Frontal superior esquerda (branca)
+    // Luz Principal (Key Light) - Branca constante
     {
       auto light = new Light{};
       light->setType(Light::Type::Point);
-      light->setPosition({-5, 5, 5});
+      light->setPosition({5, 10, -20});
       light->color = Color::white;
+      light->falloff = Light::Falloff::Constant;
+      scene->addLight(light);
+    }
+    
+    // Luz de Preenchimento (Fill Light) - Vermelho linear
+    {
+      auto light = new Light{};
+      light->setType(Light::Type::Point);
+      light->setPosition({10, 10, 0});
+      light->color = Color{1.0f, 0.0f, 0.0f};
       light->falloff = Light::Falloff::Linear;
       scene->addLight(light);
     }
     
-    // Luz 2: Frontal superior direita (amarelada)
+    // Luz de Recorte (Back Light) - Azul linear
     {
       auto light = new Light{};
       light->setType(Light::Type::Point);
-      light->setPosition({5, 5, 5});
-      light->color = Color::red; // Luz quente
-      light->falloff = Light::Falloff::Linear;
-      scene->addLight(light);
-    }
-    
-    // Luz 3: Posterior (azulada)
-    {
-      auto light = new Light{};
-      light->setType(Light::Type::Point);
-      light->setPosition({0, 3, -8});
-      light->color = Color::blue; // Luz fria
+      light->setPosition({-10, 20, 10});
+      light->color = Color{0.0f, 0.0f, 1.0f}; 
       light->falloff = Light::Falloff::Linear;
       scene->addLight(light);
     }
   }
+
+  // Adiciona o plano de chão com rotação adequada e material base.
+  static void addFloor(Scene* scene)
+  {
+    auto shape = new Plane{25.0f, 25.0f};
+    
+    auto material = new PBRMaterial(
+        Color{0.2f, 0.2f, 0.2f}, 
+        Color{0.1f, 0.1f, 0.1f}, 
+        0.6f,                    
+        0.0f                     
+    );
+
+    auto actor = new PBRActor{"Floor", shape, material};
+    quatf rotation{-90.0f, vec3f{1.0f, 0.0f, 0.0f}};
+    
+    actor->setTransform(mat4f::TRS({0, 0, 0}, rotation, vec3f{1}));
+    
+    scene->addActor(actor);
+  }
   
+  // Organiza os atores em fileiras para demonstração de materiais.
   static void addActors(Scene* scene)
   {
-    const float spacing = 2.5f; // Espaçamento entre esferas
-    const float rowOffset = 2.5f; // Distância vertical entre fileiras
+    const float xSpacing = 2.5f; 
+    const float zSpacing = 3.0f; 
+    float startX = -5.0f;
+
+    float sphereY = 1.0f;
+    float boxY = 1.0f;
+
+    // Esferas Dielétricas
+    addDielectricRow(scene, {startX, sphereY, -zSpacing * 1.5f}, xSpacing);
     
-    // Fileira superior: 5 Dielétricos com rugosidades variadas
-    addDielectricRow(scene, {-5.0f, rowOffset, 0}, spacing);
+    // Boxes com propriedades mistas
+    addBoxRow(scene, {startX, boxY, -zSpacing * 0.5f}, xSpacing);
     
-    // Fileira inferior: 5 Metais com rugosidades variadas
-    addMetalRow(scene, {-5.0f, -rowOffset, 0}, spacing);
+    // Esferas Metálicas
+    addMetalRow(scene, {startX, sphereY, zSpacing * 0.5f}, xSpacing);
+
+    // Boxes Metálicos
+    addMetalBoxRow(scene, {startX, boxY, zSpacing * 1.5f}, xSpacing);
   }
   
-  static void addDielectricRow(Scene* scene, 
-                                const vec3f& startPos,
-                                float spacing)
+  // Gera fileira de esferas não-metálicas com rugosidade variável.
+  static void addDielectricRow(Scene* scene, const vec3f& startPos, float spacing)
   {
-    // Cores para dielétricos
     Color colors[] = {
-      Color{0.8f, 0.2f, 0.2f},  // Vermelho
-      Color{0.2f, 0.8f, 0.2f},  // Verde
-      Color{0.2f, 0.2f, 0.8f},  // Azul
-      Color{0.8f, 0.8f, 0.2f},  // Amarelo
-      Color{0.8f, 0.2f, 0.8f}   // Magenta
+      Color{0.8f, 0.2f, 0.2f}, Color{0.2f, 0.8f, 0.2f}, Color{0.2f, 0.2f, 0.8f},
+      Color{0.8f, 0.8f, 0.2f}, Color{0.8f, 0.2f, 0.8f}
     };
-    
     float roughnesses[] = {0.1f, 0.3f, 0.5f, 0.7f, 0.9f};
     
     for(int i = 0; i < 5; ++i)
@@ -110,55 +121,90 @@ private:
       vec3f position = startPos + vec3f{i * spacing, 0, 0};
       
       auto material = PBRMaterial::dielectric(colors[i], roughnesses[i]);
-      
-      // Criar shape (esfera)
-      auto shape = new Sphere{1.0f}; // raio=1, subdiv=3
+      auto shape = new Sphere{1.0f, 3};
       
       char name[32];
       snprintf(name, 32, "Dielectric_%d", i);
       
       auto actor = new PBRActor{name, shape, material};
-      actor->setTransform(mat4f::translation(position));
-      
+      actor->setTransform(mat4f::TRS(position, quatf::identity(), vec3f{1}));
       scene->addActor(actor);
     }
   }
   
-  static void addMetalRow(Scene* scene,
-                          const vec3f& startPos,
-                          float spacing)
+  // Gera fileira de esferas com presets metálicos (Cobre, Alumínio, etc).
+  static void addMetalRow(Scene* scene, const vec3f& startPos, float spacing)
   {
     float roughnesses[] = {0.1f, 0.3f, 0.5f, 0.7f, 0.9f};
-    
-    // Metais: cobre, alumínio, prata, titânio, ouro
-    PBRMaterial materials[] = {
-      PBRMaterial::copper(roughnesses[0]),
-      PBRMaterial::aluminum(roughnesses[1]),
-      PBRMaterial::silver(roughnesses[2]),
-      PBRMaterial::titanium(roughnesses[3]),
+    PBRMaterial* materials[] = {
+      PBRMaterial::copper(roughnesses[0]), PBRMaterial::aluminum(roughnesses[1]),
+      PBRMaterial::silver(roughnesses[2]), PBRMaterial::titanium(roughnesses[3]),
       PBRMaterial::gold(roughnesses[4])
     };
-    
-    const char* names[] = {
-      "Copper", "Aluminum", "Silver", "Titanium", "Gold"
-    };
+    const char* names[] = { "Copper", "Aluminum", "Silver", "Titanium", "Gold" };
     
     for(int i = 0; i < 5; ++i)
     {
       vec3f position = startPos + vec3f{i * spacing, 0, 0};
-
-      // Criar material
-      auto material = materialFuncs[i](roughnesses[i]);
+      auto shape = new Sphere{1.0f, 3};
+      auto actor = new PBRActor{names[i], shape, materials[i]};
+      actor->setTransform(mat4f::TRS(position, quatf::identity(), vec3f{1}));
+      scene->addActor(actor);
+    }
+  }
+  
+  // Gera fileira de caixas variando metalicidade e rugosidade.
+  static void addBoxRow(Scene* scene, const vec3f& startPos, float spacing)
+  {
+    Color colors[] = {
+      Color{0.9f, 0.1f, 0.1f}, Color{0.1f, 0.9f, 0.1f}, Color{0.1f, 0.1f, 0.9f},
+      Color{0.9f, 0.9f, 0.1f}, Color{0.9f, 0.1f, 0.9f}
+    };
+    float roughnesses[] = {0.2f, 0.4f, 0.6f, 0.8f, 1.0f};
+    float metalness[] = {0.0f, 0.2f, 0.5f, 0.8f, 1.0f};
+    
+    for(int i = 0; i < 5; ++i)
+    {
+      vec3f position = startPos + vec3f{i * spacing, 0, 0};
       
-      // Criar shape (esfera)
-      auto shape = new Sphere{1.0f, 3}; // raio=1, subdiv=3
+      auto material = new PBRMaterial(
+          colors[i], 
+          Color{0.04f, 0.04f, 0.04f} * (1.0f - metalness[i]) + colors[i] * metalness[i],
+          roughnesses[i],
+          metalness[i]
+      );
       
-      auto actor = new PBRActor{names[i], shape, material};
-      actor->setTransform(mat4f::translation(position));
+      auto shape = new Box{1.5f};
+      char name[32];
+      snprintf(name, 32, "Box_Mixed_%d", i);
+      
+      auto actor = new PBRActor{name, shape, material};
+      actor->setTransform(mat4f::TRS(position, quatf::identity(), vec3f{1}));
       scene->addActor(actor);
     }
   }
 
-}; // SceneBuilder
+  // Gera fileira de caixas puramente metálicas.
+  static void addMetalBoxRow(Scene* scene, const vec3f& startPos, float spacing)
+  {
+    float roughnesses[] = {0.1f, 0.3f, 0.5f, 0.7f, 0.9f};
+    PBRMaterial* materials[] = {
+      PBRMaterial::copper(roughnesses[0]), PBRMaterial::aluminum(roughnesses[1]),
+      PBRMaterial::silver(roughnesses[2]), PBRMaterial::titanium(roughnesses[3]),
+      PBRMaterial::gold(roughnesses[4])
+    };
+    const char* names[] = { "Box_Copper", "Box_Aluminum", "Box_Silver", "Box_Titanium", "Box_Gold" };
+    
+    for(int i = 0; i < 5; ++i)
+    {
+      vec3f position = startPos + vec3f{i * spacing, 0, 0};
+      auto shape = new Box{1.5f};
+      auto actor = new PBRActor{names[i], shape, materials[i]};
+      actor->setTransform(mat4f::TRS(position, quatf::identity(), vec3f{1}));
+      scene->addActor(actor);
+    }
+  }
 
-} // end namespace cg
+};
+
+}

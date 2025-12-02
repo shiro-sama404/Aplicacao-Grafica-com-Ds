@@ -12,7 +12,7 @@ if(MSVC)
 endif()
 
 # Definir diretórios do cg (biblioteca do professor)
-set(CG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../cg")
+set(CG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../cg")
 set(CG_BUILD_DIR "${CMAKE_BINARY_DIR}/cg_build")
 
 # Adicionar cg como subdirectory
@@ -38,6 +38,9 @@ add_executable(tp1
   Plane.h
   Sphere.h
   Cube.h
+  Box.h
+  RayCaster.h
+  RayCaster.cpp
   ${GL3W_SRC}
 )
 

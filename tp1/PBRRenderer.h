@@ -1,20 +1,10 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| PBRRenderer.h                                                   |
-//|                                                                 |
-//| Physically-Based Rendering renderer for TP1                    |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #pragma once
 
 #include "graphics/Camera.h"
 #include "Scene.h"
 #include "PBRMaterial.h"
 #include "geometry/TriangleMesh.h"
-//#include "graphics/GLSL.h"
 #include "core/Globals.h"
-//#include <GL/glew.h>
 
 namespace cg
 { // begin namespace cg
@@ -30,7 +20,7 @@ namespace cg
 
         void render();
 
-        // Acessar cena e câmera
+        // Acessar cena e cï¿½mera
         Scene* scene() const { return _scene; }
         Camera* camera() const { return _camera; }
 
@@ -46,6 +36,11 @@ namespace cg
             const PBRMaterial& material,
             const mat4f& transform,
             const mat3f& normalMatrix);
+        
+        void drawSelectedActorWireframe(PBRActor* actor);
+        
+        // Definir ator selecionado para destacar
+        void setSelectedActor(PBRActor* actor) { _selectedActor = actor; }
 
     protected:
         struct Viewport
@@ -67,6 +62,7 @@ namespace cg
     private:
         struct PBRData;
         PBRData* _pbrData;
+        PBRActor* _selectedActor = nullptr;
 
     }; // PBRRenderer
 

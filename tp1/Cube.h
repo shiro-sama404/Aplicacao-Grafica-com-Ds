@@ -1,21 +1,11 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| Cube.h                                                     |
-//|                                                                 |
-//| Cube shape for TP1                                             |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #pragma once
 
 #include "Shape3.h"
 
 namespace cg
-{ // begin namespace cg
+{
 
-//
-// Cube: cubo (box)
-//
+// Primitiva geométrica representando um cubo (caixa alinhada aos eixos).
 class Cube: public Shape3
 {
 public:
@@ -34,9 +24,9 @@ public:
     generateMesh();
   }
 
+  // Calcula a normal da superfície baseada na face dominante.
   vec3f normalAt(const vec3f& P) const override
   {
-    // Determinar qual face baseado em qual componente tem maior magnitude
     vec3f absP = vec3f{std::abs(P.x), std::abs(P.y), std::abs(P.z)};
     float hs = _size / 2.0f;
     
@@ -47,15 +37,13 @@ public:
     if (std::abs(absP.z - hs) < 0.001f)
       return vec3f{0, 0, P.z > 0 ? 1.0f : -1.0f};
     
-    // Fallback: normalizar P (aproximação)
+    // Fallback para aproximação esférica caso P não esteja exatamente na superfície.
     return P.versor();
   }
 
+  // Implementação do algoritmo "Slab Method" para interseção raio-AABB.
   bool intersect(const Ray3f& ray, float& distance) const override
   {
-    // Interseção raio-AABB (Axis-Aligned Bounding Box)
-    // Algoritmo slab method
-    
     float hs = _size / 2.0f;
     vec3f minBounds{-hs, -hs, -hs};
     vec3f maxBounds{hs, hs, hs};
@@ -70,7 +58,7 @@ public:
     {
       if (std::abs(D[i]) < 1e-6f)
       {
-        // Raio paralelo ao slab
+        // Raio paralelo ao plano (slab).
         if (O[i] < minBounds[i] || O[i] > maxBounds[i])
           return false;
       }
@@ -114,38 +102,35 @@ protected:
   float _size;
   float _width, _height, _depth;
 
+  // Gera a malha triangular com normais independentes por face (Flat Shading).
   void generateMesh() override
   {
-    // 1. DEFINIÇÃO DE TAMANHOS
-    // 6 faces * 4 vértices = 24 vértices (normais independentes por face)
-    // 6 faces * 2 triângulos = 12 triângulos
+    // 24 vértices (4 por face * 6 faces) para suportar arestas vivas.
     const int vertexCount = 24;
     const int triangleCount = 12;
 
-    // 2. ALOCAÇÃO DIRETA
     vec3f* vertices = new vec3f[vertexCount];
     vec3f* normals = new vec3f[vertexCount];
-    vec2f* uvs = new vec2f;
+    vec2f* uvs = new vec2f; // Nota: Alocação única para UV placeholder.
     TriangleMesh::Triangle* triangles = new TriangleMesh::Triangle[triangleCount];
 
     float hs = _size / 2.0f;
     int vIdx = 0;
     int tIdx = 0;
 
-    // Função auxiliar para criar uma face
+    // Helper lambda para construção de faces quadrangulares.
     auto makeFace = [&](const vec3f& n, 
                         const vec3f& v0, const vec3f& v1, 
                         const vec3f& v2, const vec3f& v3) 
     {
         int base = vIdx;
         
-        // Vértices e Normais
         vertices[vIdx] = v0; normals[vIdx] = n; vIdx++;
         vertices[vIdx] = v1; normals[vIdx] = n; vIdx++;
         vertices[vIdx] = v2; normals[vIdx] = n; vIdx++;
         vertices[vIdx] = v3; normals[vIdx] = n; vIdx++;
 
-        // Triângulos (preservando winding CCW: 0-1-2, 0-2-3)
+        // Triangulação da face.
         triangles[tIdx].v[0] = base; 
         triangles[tIdx].v[1] = base + 1; 
         triangles[tIdx].v[2] = base + 2; 
@@ -157,11 +142,13 @@ protected:
         tIdx++;
     };
 
+    // Definição das 6 faces do cubo.
+    
     // Face +Z (Front)
     makeFace(vec3f{0, 0, 1}, 
              vec3f{-hs, -hs, hs}, vec3f{hs, -hs, hs}, vec3f{hs, hs, hs}, vec3f{-hs, hs, hs});
 
-    // Face -Z (Back) - Ordem ajustada para normal apontar para fora
+    // Face -Z (Back)
     makeFace(vec3f{0, 0, -1}, 
              vec3f{hs, -hs, -hs}, vec3f{-hs, -hs, -hs}, vec3f{-hs, hs, -hs}, vec3f{hs, hs, -hs});
 
@@ -181,7 +168,6 @@ protected:
     makeFace(vec3f{0, -1, 0}, 
              vec3f{-hs, -hs, -hs}, vec3f{hs, -hs, -hs}, vec3f{hs, -hs, hs}, vec3f{-hs, -hs, hs});
 
-    // 4. CRIAÇÃO DA MALHA
     TriangleMesh::Data data = {
       vertexCount,
       triangleCount,
@@ -194,6 +180,6 @@ protected:
     _mesh = new TriangleMesh{std::move(data)};
   }
 
-}; // Cube
+};
 
-} // end namespace cg
+}
