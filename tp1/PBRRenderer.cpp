@@ -144,7 +144,6 @@ struct PBRRenderer::PBRData
     GLint position, color, falloff;
   };
   
-  // CORREÇÃO: Isso agora vai compilar porque GLGraphics3.h foi incluído
   GLSL::Program program;
   
   GLint mvMatrixLoc;
@@ -157,6 +156,9 @@ struct PBRRenderer::PBRData
   GLint materialOsLoc;
   GLint materialRoughnessLoc;
   GLint materialMetalnessLoc;
+
+  GLint enableColorLoc;
+  GLint colorLoc;
   
   PBRData();
   void uniformLocations();
@@ -294,11 +296,9 @@ void PBRRenderer::drawMeshPBR(const TriangleMesh& mesh,
   
   if (m)
   {
-      m->bind(); // Faz o binding do VAO
+      m->bind(); // binding do VAO
       int indexCount = mesh.data().triangleCount * 3;
       glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
-      // Não precisamos de unbind explícito aqui se o program cuidar disso,
-      // mas é boa prática se misturar com outros renderers.
   }
 }
 
@@ -308,53 +308,47 @@ void PBRRenderer::render()
   beginRender();
   renderLights();
   renderActors();
-  
-  // Desenhar wireframe do objeto selecionado
-  if (_selectedActor != nullptr && _selectedActor->isVisible())
-  {
-    drawSelectedActorWireframe(_selectedActor);
-  }
-  
+  drawSelectedActorWireframe(_selectedActor);
   endRender();
 }
 
 void PBRRenderer::drawSelectedActorWireframe(PBRActor* actor)
 {
-  if (actor == nullptr) return;
+  if (!actor || !actor->isVisible()) return;
   
   auto shape = actor->shape();
-  if (shape == nullptr) return;
-  
+  if (!shape) return;
+
   const auto& mesh = shape->mesh();
-  if (mesh == nullptr) return;
+  if (!mesh) return;
+
+  auto bounds = actor->bounds();
+
+  cg::vec3f center = bounds.center();
+  cg::vec3f size = bounds.size();
+  cg::vec3f scale = size * 0.5f;
   
-  // Salvar estado atual do OpenGL
-  GLint oldPolygonMode[2];
-  glGetIntegerv(GL_POLYGON_MODE, oldPolygonMode);
-  GLfloat oldLineWidth;
-  glGetFloatv(GL_LINE_WIDTH, &oldLineWidth);
+  cg::mat4f modelMatrix = cg::mat4f::TRS(center, cg::quatf::identity(), scale);
   
-  // Desenhar wireframe em amarelo brilhante
+  auto cam = camera();
+  auto mvp = cam->projectionMatrix() * cam->worldToCameraMatrix() * modelMatrix;
+  
+  _pbrData->program.setUniform(_pbrData->enableColorLoc, 1);
+  _pbrData->program.setUniformVec3(_pbrData->colorLoc, cg::vec3f{1.0f, 1.0f, 0.0f});
+  _pbrData->program.setUniformMat4(_pbrData->mvpMatrixLoc, mvp);
+  
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  glLineWidth(3.0f);
-  glDepthFunc(GL_LEQUAL); // Permitir desenhar sobre o objeto
   
-  // Criar um material temporário amarelo brilhante para wireframe (tipo marca-texto)
-  PBRMaterial wireframeMaterial;
-  wireframeMaterial.Od = Color{1.0f, 0.95f, 0.0f}; // Amarelo saturado tipo marca-texto
-  wireframeMaterial.Os = Color{1.0f, 0.95f, 0.0f};
-  wireframeMaterial.roughness = 0.0f;
-  wireframeMaterial.metalness = 0.0f;
+  auto boxMesh = cg::GLGraphics3::box();
+  auto glMeshObj = cg::glMesh(boxMesh);
+  glMeshObj->bind();
   
-  // Desenhar mesh em wireframe
-  drawMeshPBR(*mesh, 
-              wireframeMaterial,
-              actor->transform(),
-              actor->normalMatrix());
+  glDrawElements(GL_TRIANGLES,
+    boxMesh->data().triangleCount * 3,
+    GL_UNSIGNED_INT,
+    nullptr);
+    
+  _pbrData->program.setUniform(_pbrData->enableColorLoc, 0);
   
-  // Restaurar estado
-  glPolygonMode(GL_FRONT, oldPolygonMode[0]);
-  glPolygonMode(GL_BACK, oldPolygonMode[1]);
-  glLineWidth(oldLineWidth);
-  glDepthFunc(GL_LESS);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }

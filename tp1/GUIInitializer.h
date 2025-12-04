@@ -21,17 +21,15 @@ public:
 private:
   MainWindow& _window;
   int _selectedActorIndex = -1;
+  int _resetCooldown = 0;
 
-  // Métodos de construção de painéis específicos da interface.
+  // Métodos de construção de painéis da interface.
   void drawSceneControls();
   void drawRendererControls();
   void drawCameraControls();
   void drawLightControls();
   void drawMaterialControls();
-  void drawActorInspector();
   
-  // Recupera o ator atualmente selecionado, priorizando a seleção via Ray Picking (mouse)
-  // sobre a seleção via lista (combo box).
   PBRActor* getSelectedActor();
 };
 

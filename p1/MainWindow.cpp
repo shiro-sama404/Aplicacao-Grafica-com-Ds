@@ -22,7 +22,7 @@ MainWindow::initialize()
     Base::initialize();
     _camera = camera();
 
-    // Configuração inicial da câmera
+    // Configuraï¿½ï¿½o inicial da cï¿½mera
     vec3f eye{ 5, 2, 12 };
     vec3f target{ 0, -1, 0 };
     vec3f up{ 0, -1, 0 };
@@ -45,7 +45,7 @@ MainWindow::initialize()
 void
 MainWindow::update()
 {
-    // Refaz o ray casting se a câmera for modificada
+    // Refaz o ray casting se a cÃ¢mera for modificada
     if (_enableRayCasting && _camera->modified())
         rayCasting();
     _camera->update();
@@ -87,7 +87,7 @@ MainWindow::gui()
     ImGui::SetNextWindowSize({ 360, 180 });
     ImGui::Begin("P1 GUI");
 
-    bool colorChanged = false; // Flag pra mudança de cor
+    bool colorChanged = false; // Flag pra mudanï¿½a de cor
 
     // Editor de cor para as esferas
     if (ImGui::ColorEdit3("Spheres Color", (float*)&_sphereColor))
@@ -180,7 +180,7 @@ void MainWindow::createScene()
     _scene->addLight(light3);
 
 
-    // === Configurações da Cena ===
+    // === Configuraï¿½ï¿½es da Cena ===
     _scene->background = Color(0.05f, 0.05f, 0.05f);
     _scene->ambientLight = Color{ 0.2f, 0.2f, 0.2f };
 }

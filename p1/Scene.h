@@ -22,7 +22,7 @@ public:
 	List<Reference<Actor>> _actors;
 	List<Reference<Light>> _lights;
 
-	// --- Configurações ---
+	// --- ConfiguraÃ§Ãµes ---
 	Color background{ 0.05f, 0.05f, 0.05f };
 	Color ambientLight{ 0.1f, 0.1f, 0.1f };
 

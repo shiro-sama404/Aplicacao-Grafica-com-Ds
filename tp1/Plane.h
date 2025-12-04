@@ -11,7 +11,7 @@ public:
   Plane(float width = 2.0f, float height = 2.0f):
     _width{width},
     _height{height},
-    _normal{0, 0, 1} // Normal padrão orientada para +Z.
+    _normal{0, 1, 0} // Normal padrão orientada para +y.
   {
     generateMesh();
   }
@@ -26,16 +26,16 @@ public:
   // Verifica se o ponto de interseção no plano infinito reside dentro dos limites de largura e altura.
   bool intersect(const Ray3f& ray, float& distance) const override
   {
-    // Verifica paralelismo com o plano Z=0.
-    if (std::abs(ray.direction.z) < 1e-6f) return false;
+    // Verifica paralelismo com o plano y=0.
+    if (std::abs(ray.direction.y) < 1e-6f) return false;
     
-    float t = -ray.origin.z / ray.direction.z;
+    float t = -ray.origin.y / ray.direction.y;
     
     if (t > 0 && t < distance)
     {
-      vec3f P = ray(t);
+      vec3f P = ray.origin + ray.direction * t;;
       // Validação das coordenadas locais (hit point bounds).
-      if (std::abs(P.x) <= _width/2.0f && std::abs(P.y) <= _height/2.0f)
+      if (std::abs(P.x) <= _width/2.0f && std::abs(P.z) <= _height/2.0f)
       {
         distance = t;
         return true;
@@ -44,49 +44,56 @@ public:
     return false;
   }
 
-  // Define a AABB com espessura mínima no eixo Z para garantir consistência em estruturas espaciais.
+  // Define a AABB com espessura mínima no eixo y.
   Bounds3f bounds() const override
   {
     float hw = _width / 2.0f;
     float hh = _height / 2.0f;
     return Bounds3f{
-      vec3f{-hw, -hh, -0.01f},
-      vec3f{hw, hh, 0.01f}
+      vec3f{-hw, -0.01f, -hh},
+      vec3f{hw, 0.01f, hh}
     };
   }
 
-protected:
+private:
   float _width, _height;
-  vec3f _normal;
+  vec3f _normal = {0.0f, 1.0f, 0.0f};
 
-  // Gera a malha geométrica composta por dois triângulos (quad).
   void generateMesh() override
   {
-    const int vertexCount = 4;
-    const int triangleCount = 2;
+    const int vertexCount = 8;
+    const int triangleCount = 4;
 
     vec3f* vertices = new vec3f[vertexCount];
     vec3f* normals = new vec3f[vertexCount];
-    vec2f* uvs = new vec2f[vertexCount];
+    vec2f* uvs = new vec2f[1];
     TriangleMesh::Triangle* triangles = new TriangleMesh::Triangle[triangleCount];
 
     float hw = _width / 2.0f;
     float hh = _height / 2.0f;
-    
-    // Definição dos vértices em ordem anti-horária (CCW).
-    vertices[0] = vec3f{-hw, -hh, 0}; // Inferior Esquerdo
-    vertices[1] = vec3f{ hw, -hh, 0}; // Inferior Direito
-    vertices[2] = vec3f{ hw,  hh, 0}; // Superior Direito
-    vertices[3] = vec3f{-hw,  hh, 0}; // Superior Esquerdo
-    
+
+    // Vértices da Face Superior (Y = 0)
+    vertices[0] = vec3f{-hw, 0.0f, -hh}; 
+    vertices[1] = vec3f{ hw, 0.0f, -hh}; 
+    vertices[2] = vec3f{ hw, 0.0f,  hh}; 
+    vertices[3] = vec3f{-hw, 0.0f,  hh}; 
+
+    // Vértices da Face Inferior (Y = 0) - Mesma posição, normal diferente
+    vertices[4] = vertices[0];
+    vertices[5] = vertices[1];
+    vertices[6] = vertices[2];
+    vertices[7] = vertices[3];
+
+    // Normais
     for (int i = 0; i < vertexCount; ++i)
-    {
-        normals[i] = _normal;
-        uvs[i] = vec2f{0, 0};
-    }
+      normals[i] = -_normal;
+    for (int i = 4; i < 8; ++i)
+      normals[i] = _normal;
     
-    triangles[0].v[0] = 0; triangles[0].v[1] = 1; triangles[0].v[2] = 2;
-    triangles[1].v[0] = 0; triangles[1].v[1] = 2; triangles[1].v[2] = 3;
+    triangles[0].setVertices(0, 1, 2);
+    triangles[1].setVertices(0, 2, 3);
+    triangles[2].setVertices(4, 6, 5);
+    triangles[3].setVertices(4, 7, 6);
 
     TriangleMesh::Data data = {
       vertexCount,

@@ -6,6 +6,8 @@
 #include <vector>
 #include <array>
 #include <algorithm>
+#include <unordered_map>
+#include <cstdint>
 
 namespace cg
 {
@@ -64,8 +66,8 @@ public:
   Bounds3f bounds() const override
   {
     return Bounds3f{
-      vec3f{-_radius, -_radius, -_radius},
-      vec3f{_radius, _radius, _radius}
+      vec3f{-_radius},
+      vec3f{_radius}
     };
   }
 
@@ -76,16 +78,27 @@ protected:
   // Gera a malha poligonal via subdivisão recursiva de um icosaedro.
   void generateMesh() override
   {
-    std::vector<vec3f> vertices;
-    std::vector<std::array<int, 3>> triangles;
+    const int powerOf4 = 1 << (_subdivisions * 2); // 4^subdivisões
+    const int expectedVertices = 10 * powerOf4 + 2;
+    const int expectedTriangles = 20 * powerOf4;
 
-    // Definição do icosaedro base.
+    std::vector<vec3f> vertices;
+    vertices.reserve(expectedVertices);
+
+    std::vector<std::array<int, 3>> triangles;
+    triangles.reserve(expectedTriangles);
+
+    // Definição do icosaedro base
     const float t = (1.0f + std::sqrt(5.0f)) / 2.0f;
-    vertices = {
-      vec3f{-1,  t,  0}.versor(), vec3f{ 1,  t,  0}.versor(), vec3f{-1, -t,  0}.versor(), vec3f{ 1, -t,  0}.versor(),
-      vec3f{ 0, -1,  t}.versor(), vec3f{ 0,  1,  t}.versor(), vec3f{ 0, -1, -t}.versor(), vec3f{ 0,  1, -t}.versor(),
-      vec3f{ t,  0, -1}.versor(), vec3f{ t,  0,  1}.versor(), vec3f{-t,  0, -1}.versor(), vec3f{-t,  0,  1}.versor()
+    
+    // Adiciona vértices iniciais diretamente
+    auto addVert = [&](float x, float y, float z) {
+        vertices.push_back(vec3f{x, y, z}.versor());
     };
+
+    addVert(-1,  t,  0); addVert( 1,  t,  0); addVert(-1, -t,  0); addVert( 1, -t,  0);
+    addVert( 0, -1,  t); addVert( 0,  1,  t); addVert( 0, -1, -t); addVert( 0,  1, -t);
+    addVert( t,  0, -1); addVert( t,  0,  1); addVert(-t,  0, -1); addVert(-t,  0,  1);
 
     triangles = {
       {0, 11, 5}, {0, 5, 1}, {0, 1, 7}, {0, 7, 10}, {0, 10, 11},
@@ -94,21 +107,29 @@ protected:
       {4, 9, 5}, {2, 4, 11}, {6, 2, 10}, {8, 6, 7}, {9, 8, 1}
     };
 
-    // Processo de subdivisão dos triângulos.
+    // Cache pra evitar aquela merda de duplicação de vértices no ponto médio
+    std::unordered_map<uint64_t, int> midpointCache;
+
     for (int i = 0; i < _subdivisions; ++i)
     {
+      midpointCache.clear();
+      midpointCache.reserve(triangles.size() * 3); 
+
       std::vector<std::array<int, 3>> newTriangles;
-      std::map<std::pair<int, int>, int> midpointCache;
+      newTriangles.reserve(triangles.size() * 4);
 
       auto getMidpoint = [&](int v1, int v2) -> int {
-        int a = std::min(v1, v2);
-        int b = std::max(v1, v2);
-        auto key = std::make_pair(a, b);
+        uint64_t a = (v1 < v2) ? v1 : v2;
+        uint64_t b = (v1 < v2) ? v2 : v1;
         
+        uint64_t key = (a << 32) | b;
+
         auto it = midpointCache.find(key);
         if (it != midpointCache.end()) return it->second;
 
-        vec3f midpoint = ((vertices[v1] + vertices[v2]) * 0.5f).versor();
+        vec3f midpoint = (vertices[v1] + vertices[v2]); 
+        midpoint.normalize();
+
         int index = (int)vertices.size();
         vertices.push_back(midpoint);
         midpointCache[key] = index;
@@ -120,6 +141,7 @@ protected:
         int v0 = tri[0];
         int v1 = tri[1];
         int v2 = tri[2];
+
         int a = getMidpoint(v0, v1);
         int b = getMidpoint(v1, v2);
         int c = getMidpoint(v2, v0);
@@ -129,44 +151,38 @@ protected:
         newTriangles.push_back({v2, c, b});
         newTriangles.push_back({a, b, c});
       }
-      triangles = newTriangles;
+      triangles = std::move(newTriangles);
     }
 
-    // Construção e alocação da estrutura TriangleMesh.
+    // Construção final da malha
     int numVertices = (int)vertices.size();
     int numTriangles = (int)triangles.size();
 
     vec3f* vertexArray = new vec3f[numVertices];
     vec3f* normalArray = new vec3f[numVertices];
-    vec2f* uvArray = new vec2f[numVertices];
+    vec2f* uvs = new vec2f[1];
     TriangleMesh::Triangle* triangleArray = new TriangleMesh::Triangle[numTriangles];
 
     for (int i = 0; i < numVertices; ++i)
     {
         vertexArray[i] = vertices[i] * _radius;
         normalArray[i] = vertices[i];
-        uvArray[i] = vec2f{0.0f, 0.0f};
     }
 
     for (int i = 0; i < numTriangles; ++i)
-    {
-        triangleArray[i].v[0] = triangles[i][0];
-        triangleArray[i].v[1] = triangles[i][1];
-        triangleArray[i].v[2] = triangles[i][2];
-    }
+        triangleArray[i].setVertices(triangles[i][0], triangles[i][1], triangles[i][2]);
 
     TriangleMesh::Data data = {
       numVertices,
       numTriangles,
       vertexArray,
       normalArray,
-      uvArray,
+      uvs,
       triangleArray
     };
 
     _mesh = new TriangleMesh{std::move(data)};
   }
-
 };
 
 }

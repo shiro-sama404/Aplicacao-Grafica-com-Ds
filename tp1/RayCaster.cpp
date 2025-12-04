@@ -13,8 +13,7 @@ constexpr float PI = 3.14159265359f;
 constexpr float MIN_SPEC = 0.04f; // Reflectância base para dielétricos (F0)
 constexpr float EPSILON = 1e-4f;  // Bias para evitar auto-interseção (Shadow Acne)
 
-void
-RayCaster::buildBVH()
+void RayCaster::buildBVH()
 {
   std::vector<Reference<PBRActor>> actors;
   
@@ -33,8 +32,7 @@ RayCaster::buildBVH()
 }
 
 // Gera o raio primário a partir da câmera para as coordenadas de pixel (x, y).
-void
-RayCaster::setPixelRay(float x, float y, Ray3f& ray)
+void RayCaster::setPixelRay(float x, float y, Ray3f& ray)
 {
   auto p = imageToWindow(x, y);
   const auto& m = _camera->cameraToWorldMatrix();
@@ -63,8 +61,7 @@ RayCaster::setPixelRay(float x, float y, Ray3f& ray)
 }
 
 // Mapeia coordenadas do espaço de imagem (raster) para o plano de visualização no espaço do mundo.
-vec3f
-RayCaster::imageToWindow(float x, float y) const
+vec3f RayCaster::imageToWindow(float x, float y) const
 {
   const auto& m = _camera->cameraToWorldMatrix();
   vec3f u = vec3f{m[0].x, m[0].y, m[0].z};
@@ -85,26 +82,30 @@ RayCaster::imageToWindow(float x, float y) const
 }
 
 // Realiza o teste de interseção do raio com a cena.
-bool
-RayCaster::intersect(const Ray3f& ray, Intersection& hit)
+bool RayCaster::intersect(const Ray3f& ray, Intersection& hit)
 {
   hit.object = nullptr;
   hit.distance = ray.tMax;
   
-  if (_bvh == nullptr || _bvh->empty())
+  if (!_bvh || _bvh->empty())
     return false;
   
-  // Tentativa de interseção otimizada via BVH (complexidade logarítmica).
+  // Tentativa de interseção via BVH.
   bool found = _bvh->intersect(ray, hit);
   
-  if (!found)
+  if (!found && _bruteIntersect)
   {
     // Fallback: Busca linear para garantir robustez caso o BVH falhe ou não cubra objetos dinâmicos.
     PBRActor* closestActor = nullptr;
     float closestDistance = ray.tMax;
     
-    for (auto actor : _scene->actors())
+    //printf("intersect 1");
+
+    for (const auto& actorRef : _scene->actors())
     {
+      // Extrai o ponteiro bruto (T*) do wrapper Reference<T>
+      PBRActor* actor = actorRef.get();
+
       if (!actor->isVisible())
         continue;
       
@@ -120,6 +121,8 @@ RayCaster::intersect(const Ray3f& ray, Intersection& hit)
       }
     }
     
+    //printf("intersect 2\n");
+    
     if (closestActor != nullptr)
     {
       hit.object = closestActor;
@@ -132,8 +135,7 @@ RayCaster::intersect(const Ray3f& ray, Intersection& hit)
 }
 
 // Implementação do modelo de iluminação PBR.
-Color
-RayCaster::calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial* material)
+Color RayCaster::calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial* material)
 {
   vec3f V = (_camera->position() - P).versor(); // Vetor View
   vec3f normal = N.versor();
@@ -147,7 +149,7 @@ RayCaster::calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial* mater
   Color Lo{0, 0, 0};
   
   // Integração da contribuição das luzes analíticas.
-  for (auto light : _scene->lights())
+  for (const auto& light : _scene->lights())
   {
     if (!light->isTurnedOn())
       continue;
@@ -224,8 +226,7 @@ RayCaster::calculatePBR(const vec3f& P, const vec3f& N, const PBRMaterial* mater
 }
 
 // Determina a cor de um ponto dado uma interseção (Cálculo de Shading).
-Color
-RayCaster::shade(const Ray3f& ray, const Intersection& hit)
+Color RayCaster::shade(const Ray3f& ray, const Intersection& hit)
 {
   auto actor = (PBRActor*)hit.object;
   if (actor == nullptr)
@@ -256,113 +257,135 @@ RayCaster::shade(const Ray3f& ray, const Intersection& hit)
   return calculatePBR(P, N, material);
 }
 
-// Função recursiva de traçado de raios.
-Color
-RayCaster::trace(const Ray3f& ray, int depth)
-{
-  if (depth > 5) // Profundidade máxima de recursão.
-    return background();
-  
-  Intersection hit;
-  if (!intersect(ray, hit))
-    return background();
-  
-  return shade(ray, hit);
-}
-
-// Dispara um raio para um pixel específico e aplica pós-processamento básico.
-Color
-RayCaster::shoot(float x, float y)
-{
-  Ray3f ray;
-  setPixelRay(x, y, ray);
-  Color color = trace(ray, 0);
-  
-  // Clamp.
-  color.r = std::min(color.r, 1.0f);
-  color.g = std::min(color.g, 1.0f);
-  color.b = std::min(color.b, 1.0f);
-  
-  return color;
-}
-
-Color
-RayCaster::background() const
+Color RayCaster::background() const
 {
   return _scene->backgroundColor;
 }
 
 // Loop principal de renderização paralelizado.
-void
-RayCaster::renderImage(Image& image)
+void RayCaster::renderImage(Camera* camera, Image* image)
 {
-  const int W = _viewport.w;
-  const int H = _viewport.h;
-  
-  if (W <= 0 || H <= 0) return;
+    if (!camera || !image) return;
+    
+    _camera = camera;
+    const int W = _viewport.w;
+    const int H = _viewport.h;
+    if (W <= 0 || H <= 0) return;
+    
+    // Câmera
+    const vec3f camPos   = _camera->position();
+    const mat4f& camMat  = _camera->cameraToWorldMatrix();
+    const vec3f camRight = vec3f{camMat[0].x, camMat[0].y, camMat[0].z};
+    const vec3f camUp    = vec3f{camMat[1].x, camMat[1].y, camMat[1].z};
+    const vec3f camFwd   = vec3f{camMat[2].x, camMat[2].y, camMat[2].z};
 
-  // Determinação da concorrência de hardware.
-  const unsigned int hw = std::thread::hardware_concurrency();
-  const int numThreads = std::max(1u, hw ? hw : 1u);
-  const int linesPerThread = std::max(1, H / numThreads);
+    // Cálculos de Viewport e Aspect Ratio
+    float winHeight = _camera->windowHeight();
+    float aspect = (float)W / (float)H;
+    float winWidth = winHeight * aspect; 
 
-  std::atomic<bool> cancelFlag{ false };
+    float pixelWidthWorld, pixelHeightWorld;
+    if (W >= H) {
+        pixelHeightWorld = winHeight / H;
+        pixelWidthWorld  = (winHeight * aspect) / W;
+    } else {
+        pixelWidthWorld  = winWidth / W;
+        pixelHeightWorld = (winWidth / aspect) / H;
+    }
 
-  // Buffer intermediário para evitar condições de corrida na imagem final.
-  std::vector<Color> framebuffer(W * H);
+    const vec3f deltaU = camRight * pixelWidthWorld;
+    const vec3f deltaV = camUp * pixelHeightWorld;
+    const vec3f viewDir = -camFwd; 
+    
+    // Define centro do plano de visão
+    vec3f viewPlaneCenter;
+    if (_camera->projectionType() == Camera::Perspective)
+        viewPlaneCenter = camPos + (viewDir * _camera->nearPlane());
+    else
+        viewPlaneCenter = camPos + (viewDir * 1.0f);
 
-  // Kernel de renderização executado por cada thread.
-  auto renderBlock = [&](int y0, int y1)
-  {
-    for (int j = y0; j < y1 && !cancelFlag.load(); ++j)
+    const vec3f topLeftPixelCenter = viewPlaneCenter 
+                                   - (camRight * (pixelWidthWorld * W * 0.5f)) 
+                                   - (camUp * (pixelHeightWorld * H * 0.5f))
+                                   + (deltaU * 0.5f) + (deltaV * 0.5f);
+
+    float clipF, clipB;
+    _camera->clippingPlanes(clipF, clipB);
+    
+    const bool isOrthoProjection = (_camera->projectionType() == Camera::Parallel);
+
+    // Setup de Concorrência ---
+    const unsigned int hw = std::thread::hardware_concurrency();
+    const int numThreads = std::max(1u, hw ? hw : 1u);
+    const int linesPerThread = std::max(1, H / numThreads);
+    
+    ImageBuffer framebuffer(W, H);
+    std::atomic<bool> cancelFlag{ false };
+
+    // Kernel de Renderização
+    auto renderLoop = [&](auto IsOrthoTag, int y0, int y1) 
     {
-      float y = (float)j + 0.5f; // Centro do pixel vertical.
-      
-      for (int i = 0; i < W; ++i)
-      {
-        float x = (float)i + 0.5f; // Centro do pixel horizontal.
-        
-        Color pixelColor = shoot(x, y);
-        
-        // Mapeamento 2D -> 1D.
-        framebuffer[j * W + i] = pixelColor;
-      }
-    }
-  };
+        constexpr bool IsOrtho = decltype(IsOrthoTag)::value;
 
-  // Dispatch de threads.
-  std::vector<std::thread> threads;
-  threads.reserve(numThreads);
-  
-  for (int i = 0; i < numThreads; ++i)
-  {
-    int y0 = i * linesPerThread;
-    int y1 = (i == numThreads - 1) ? H : y0 + linesPerThread;
-    threads.emplace_back(renderBlock, y0, y1);
-  }
+        Ray3f ray;
+        ray.tMin = clipF;
+        ray.tMax = clipB;
+        Intersection hit;
 
-  // Sincronização.
-  for (auto& t : threads)
-    if (t.joinable()) t.join();
+        if constexpr (!IsOrtho) ray.origin = camPos; // Se for Perspectiva, a origem é constante.
+        if constexpr (IsOrtho)  ray.direction = viewDir; // Se for Orto, a direção é constante.
 
-  // Transferência para a textura GL final.
-  if (!cancelFlag.load())
-  {
-    // Assume-se que a classe Image possui método compatível ou iteração similar.
-    // Aqui copiamos do buffer linear para o formato da Image.
-    ImageBuffer buffer(W, H); // Wrapper temporário compatível com a API da Image.
-    for(int j=0; j<H; ++j) {
-        for(int i=0; i<W; ++i) {
-            buffer(i, j) = framebuffer[j * W + i];
+        for (int y = y0; y < y1; ++y)
+        {
+            if (cancelFlag.load(std::memory_order_relaxed)) return;
+
+            const vec3f rowStart = topLeftPixelCenter + (deltaV * (float)y);
+
+            for (int x = 0; x < W; ++x)
+            {
+                // Cálculo do pixel no mundo
+                const vec3f pixelWorldPos = rowStart + (deltaU * (float)x);
+
+                if constexpr (!IsOrtho) // Perspectiva: Direção varia, Origem fixa
+                  ray.direction = (pixelWorldPos - camPos).versor();
+                else // Ortográfica: Origem varia, Direção fixa
+                    ray.origin = pixelWorldPos;
+
+                hit.object = nullptr;
+                hit.distance = ray.tMax;
+                
+                Color finalColor = background();
+                if (intersect(ray, hit))
+                    finalColor = shade(ray, hit);
+                
+                framebuffer(x, y).set(clampColor(finalColor));
+            }
         }
+    };
+
+    // Dispatch
+    auto worker = [&](int y0, int y1) {
+        if (isOrthoProjection)
+            renderLoop(std::true_type{}, y0, y1);  // Instancia versão Orto
+        else
+            renderLoop(std::false_type{}, y0, y1); // Instancia versão Perspectiva
+    };
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i < numThreads; ++i) {
+        int y0 = i * linesPerThread;
+        int y1 = (i == numThreads - 1) ? H : y0 + linesPerThread;
+        threads.emplace_back(worker, y0, y1);
     }
-    image.setData(buffer);
-  }
+
+    for (auto& t : threads)
+        if (t.joinable()) t.join();
+
+    if (!cancelFlag.load()) image->setData(framebuffer);
 }
 
 // Executa seleção de objetos via Ray Casting (Picking).
-PBRActor*
-RayCaster::selectActor(int x, int y)
+PBRActor* RayCaster::selectActor(int x, int y)
 {
   if (_bvh == nullptr || _bvh->empty())
   {

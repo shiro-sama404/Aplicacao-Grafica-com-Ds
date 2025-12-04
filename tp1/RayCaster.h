@@ -29,6 +29,12 @@ public:
   {
   }
 
+  static inline Color clampColor(const Color& c)
+  {
+      auto clamp = [](float v) { return std::min(1.0f, std::max(0.0f, v)); };
+      return Color{ clamp(c.r), clamp(c.g), clamp(c.b), clamp(c.a) };
+  }
+
   // Define as dimensões do viewport de renderização.
   void setImageSize(int width, int height)
   {
@@ -37,13 +43,11 @@ public:
   }
 
   // Executa o pipeline de renderização (geração de raios, traçado e shading) para preencher a imagem.
-  void renderImage(Image& image);
+  void renderImage(Camera* camera, Image* image);
 
   // Executa o algoritmo de picking (seleção) disparando um raio através das coordenadas de tela (x, y).
   PBRActor* selectActor(int x, int y);
-  
-  Camera* camera() const { return _camera; }
-  
+
   // Reconstrói a estrutura de aceleração espacial (necessário se a geometria da cena for alterada).
   void rebuildBVH() { buildBVH(); }
 
@@ -53,23 +57,18 @@ private:
     int w, h;
   };
 
-  Scene* _scene;
-  Camera* _camera;
-  Viewport _viewport;
+  Reference<Camera> _camera;
   Reference<BVH<PBRActor>> _bvh;
+  Reference<Scene> _scene;
+  Viewport _viewport;
+  bool _bruteIntersect = false;
 
   // Métodos internos do pipeline de Ray Tracing
-  
+
   void buildBVH();
   
   // Gera o raio primário a partir da câmera.
   void setPixelRay(float x, float y, Ray3f& ray);
-  
-  // Dispara o processo de renderização para um único pixel.
-  Color shoot(float x, float y);
-  
-  // Função recursiva para acompanhamento do caminho do raio.
-  Color trace(const Ray3f& ray, int depth = 0);
   
   // Teste de interseção contra a estrutura de aceleração.
   bool intersect(const Ray3f& ray, Intersection& hit);
@@ -84,7 +83,6 @@ private:
   vec3f imageToWindow(float x, float y) const;
   
   Color background() const;
-
 };
 
 }

@@ -8,12 +8,13 @@ namespace cg
 {
 
 GUIInitializer::GUIInitializer(MainWindow& window) :
-  _window(window)
+  _window(window),
+  _selectedActorIndex(-1),
+  _resetCooldown(0)
 {
 }
 
-void
-GUIInitializer::draw()
+void GUIInitializer::draw()
 {
   // Configuração inicial da janela principal de controles.
   ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
@@ -21,8 +22,27 @@ GUIInitializer::draw()
 
   ImGui::Begin("TP1 - PBR Controls");
 
+  if (_resetCooldown > 0)
+  {
+      _resetCooldown--;
+      ImGui::Text("Resetting scene...");
+      ImGui::End();
+      
+      // Garante que o índice esteja limpo quando o cooldown acabar
+      if (_resetCooldown == 0)
+          _selectedActorIndex = -1;
+          
+      return; 
+  }
+
   if (ImGui::CollapsingHeader("Scene Info", ImGuiTreeNodeFlags_DefaultOpen))
     drawSceneControls();
+
+  if (_selectedActorIndex == -2)
+  {
+      ImGui::End();
+      return; 
+  }
 
   if (ImGui::CollapsingHeader("Renderer", ImGuiTreeNodeFlags_DefaultOpen))
     drawRendererControls();
@@ -39,23 +59,17 @@ GUIInitializer::draw()
   ImGui::Separator();
   // Exibição de métricas de desempenho (tempo de quadro e quadros por segundo).
   ImGui::Text("Avg %.3f ms/frame (%.1f FPS)", _window.deltaTime() * 1000.0f, ImGui::GetIO().Framerate);
-  
+
   ImGui::End();
-  
-  // Renderiza janela flutuante de inspeção detalhada do objeto selecionado.
-  drawActorInspector();
 }
 
-void
-GUIInitializer::drawRendererControls()
+void GUIInitializer::drawRendererControls()
 {
   bool useRayCaster = _window.useRayCaster();
   
   // Alternância entre pipeline de Rasterização (OpenGL) e Ray Casting (CPU).
   if (ImGui::Checkbox("Use Ray Caster", &useRayCaster))
-  {
     _window.setUseRayCaster(useRayCaster);
-  }
   
   ImGui::Text("Active Renderer: %s", useRayCaster ? "RayCaster (with BVH)" : "PBRRenderer (OpenGL)");
   
@@ -71,8 +85,7 @@ GUIInitializer::drawRendererControls()
   }
 }
 
-void
-GUIInitializer::drawSceneControls()
+void GUIInitializer::drawSceneControls()
 {
   auto scene = _window.scene();
   if(!scene) return;
@@ -82,30 +95,35 @@ GUIInitializer::drawSceneControls()
 
   // Feedback visual sobre o estado da estrutura de aceleração espacial.
   if (_window.useRayCaster() && _window.rayCaster())
-  {
     ImGui::Text("BVH: Active (RayCaster)");
-  }
+  else
+    ImGui::Text("BVH: Inactive");
   
   // Edição da cor de fundo (Background).
   float bg[3] = { scene->backgroundColor.r, scene->backgroundColor.g, scene->backgroundColor.b };
   if (ImGui::ColorEdit3("Background", bg))
-  {
     scene->backgroundColor = Color(bg[0], bg[1], bg[2]);
-  }
 
   ImGui::Spacing();
   if (ImGui::Button("Reset Scene Geometry"))
   {
-    _window.resetScene();
-    _selectedActorIndex = -1; // Invalida seleção para evitar acesso a ponteiros pendentes.
+    _window.scheduleSceneReset();
+    _resetCooldown = 2;
+    _selectedActorIndex = -2; // Invalida seleção para evitar acesso a ponteiros pendentes.
+    ImGui::SetWindowFocus(nullptr);
   }
 }
 
-void
-GUIInitializer::drawCameraControls()
+void GUIInitializer::drawCameraControls()
 {
-  auto camera = _window.camera();
+  auto camera = _window.getCamera();
   if (!camera) return;
+
+  bool useParallelProjection = camera->projectionType() == Camera::Parallel;
+
+  // Manipulação de projeção.
+  if (ImGui::Checkbox("Projeção Ortográfica", &useParallelProjection))
+    camera->setProjectionType(useParallelProjection ? Camera::Parallel : Camera::Perspective);
 
   // Manipulação de Posição.
   vec3f pos = camera->position();
@@ -137,10 +155,11 @@ GUIInitializer::drawCameraControls()
   if (ImGui::Button("Top")) { camera->setPosition({0,15,0}); camera->setEulerAngles({-90,0,0}); }
 }
 
-void
-GUIInitializer::drawLightControls()
+void GUIInitializer::drawLightControls()
 {
   auto scene = _window.scene();
+  if(!scene) return;
+
   const auto& lights = scene->lights();
   
   int i = 0;
@@ -170,10 +189,11 @@ GUIInitializer::drawLightControls()
   }
 }
 
-void
-GUIInitializer::drawMaterialControls()
+void GUIInitializer::drawMaterialControls()
 {
   auto scene = _window.scene();
+  if(!scene) return;
+
   const auto& actors = scene->actors();
 
   if (actors.empty()) return;
@@ -214,121 +234,64 @@ GUIInitializer::drawMaterialControls()
 
   // Aplicação de Materiais Predefinidos.
   ImGui::Separator();
+    ImGui::Text("Presets:");
   float r = mat->roughness;
   if (ImGui::Button("Gold")) actor->setPBRMaterial(PBRMaterial::gold(r));
   ImGui::SameLine();
-  if (ImGui::Button("Plastic")) actor->setPBRMaterial(PBRMaterial::dielectric(Color(1,0,0), r));
-
+  if (ImGui::Button("Silver")) actor->setPBRMaterial(PBRMaterial::silver(r));
+  ImGui::SameLine();
+  if (ImGui::Button("Copper")) actor->setPBRMaterial(PBRMaterial::copper(r));
+  ImGui::SameLine();
+  if (ImGui::Button("Aluminum")) actor->setPBRMaterial(PBRMaterial::aluminum(r));
+  
+  if (ImGui::Button("Titanium")) actor->setPBRMaterial(PBRMaterial::titanium(r));
+  ImGui::SameLine();
+  if (ImGui::Button("Plastic")) actor->setPBRMaterial(PBRMaterial::dielectric(Color(0.8f, 0.2f, 0.2f), r));
+  
   // Controle simples de Transformação (Translação).
   ImGui::Separator();
-  mat4f transform = actor->transform();
-  vec3f pos(transform[0][3], transform[1][3], transform[2][3]);
+  vec3f pos = actor->position();
   if (ImGui::DragFloat3("Actor Pos", (float*)&pos, 0.1f))
-  {
-    transform[0][3] = pos.x;
-    transform[1][3] = pos.y;
-    transform[2][3] = pos.z;
-    actor->setTransform(transform);
-  }
-}
+    actor->setPosition(pos);
 
-PBRActor*
-GUIInitializer::getSelectedActor()
-{
-  // Prioridade 1: Seleção via Ray Picking (clique na viewport).
-  PBRActor* clickedActor = _window.selectedActor();
-  if (clickedActor != nullptr)
-  {
-    // Sincroniza o índice da GUI com a seleção feita via mouse.
-    auto scene = _window.scene();
-    if (scene)
-    {
-      const auto& actors = scene->actors();
-      for (size_t i = 0; i < actors.size(); ++i)
-      {
-        if (actors[i] == clickedActor)
-        {
-          _selectedActorIndex = (int)i;
-          break;
-        }
-      }
-    }
-    return clickedActor;
-  }
-  
-  // Prioridade 2: Seleção via Dropdown da GUI.
-  auto scene = _window.scene();
-  if (!scene || _selectedActorIndex < 0 || _selectedActorIndex >= scene->actorCount())
-    return nullptr;
-  
-  return dynamic_cast<PBRActor*>(scene->actors()[_selectedActorIndex]);
-}
-
-void
-GUIInitializer::drawActorInspector()
-{
-  PBRActor* actor = getSelectedActor();
-  if (actor == nullptr)
-    return;
-  
-  // Janela secundária flutuante.
-  ImGui::SetNextWindowPos(ImVec2(420, 10), ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowSize(ImVec2(400, 500), ImGuiCond_FirstUseEver);
-  
-  ImGui::Begin("Actor Inspector", nullptr, ImGuiWindowFlags_None);
-  
-  ImGui::Text("Actor: %s", actor->name());
-  ImGui::Separator();
-  
-  if (ImGui::CollapsingHeader("Material Properties", ImGuiTreeNodeFlags_DefaultOpen))
-  {
-    PBRMaterial* mat = actor->pbrMaterial();
-    
-    float od[3] = { mat->Od.r, mat->Od.g, mat->Od.b };
-    if (ImGui::ColorEdit3("Albedo (Od)", od))
-      mat->Od = Color(od[0], od[1], od[2]);
-    
-    float os[3] = { mat->Os.r, mat->Os.g, mat->Os.b };
-    if (ImGui::ColorEdit3("F0 (Os)", os))
-      mat->Os = Color(os[0], os[1], os[2]);
-    
-    ImGui::SliderFloat("Roughness", &mat->roughness, 0.01f, 1.0f);
-    ImGui::SliderFloat("Metalness", &mat->metalness, 0.0f, 1.0f);
-    
-    ImGui::Separator();
-    ImGui::Text("Presets:");
-    float r = mat->roughness;
-    if (ImGui::Button("Gold")) actor->setPBRMaterial(PBRMaterial::gold(r));
-    ImGui::SameLine();
-    if (ImGui::Button("Silver")) actor->setPBRMaterial(PBRMaterial::silver(r));
-    ImGui::SameLine();
-    if (ImGui::Button("Copper")) actor->setPBRMaterial(PBRMaterial::copper(r));
-    
-    if (ImGui::Button("Aluminum")) actor->setPBRMaterial(PBRMaterial::aluminum(r));
-    ImGui::SameLine();
-    if (ImGui::Button("Titanium")) actor->setPBRMaterial(PBRMaterial::titanium(r));
-    ImGui::SameLine();
-    if (ImGui::Button("Plastic")) actor->setPBRMaterial(PBRMaterial::dielectric(Color(0.8f, 0.2f, 0.2f), r));
-  }
-  
-  if (ImGui::CollapsingHeader("Transform"))
-  {
-    mat4f transform = actor->transform();
-    vec3f pos(transform[0][3], transform[1][3], transform[2][3]);
-    if (ImGui::DragFloat3("Position", (float*)&pos, 0.1f))
-    {
-      transform[0][3] = pos.x;
-      transform[1][3] = pos.y;
-      transform[2][3] = pos.z;
-      actor->setTransform(transform);
-    }
-  }
-  
   bool visible = actor->isVisible();
   if (ImGui::Checkbox("Visible", &visible))
     actor->setVisible(visible);
+}
+
+PBRActor* GUIInitializer::getSelectedActor()
+{
+  if (_selectedActorIndex == -2 || _resetCooldown > 0)
+      return nullptr;
+
+  auto scene = _window.scene();
+  if (!scene) return nullptr;
+
+  if (_selectedActorIndex >= scene->actorCount())
+  {
+    _selectedActorIndex = -1;
+    return nullptr;
+  }
+
+  PBRActor* clickedActor = _window.selectedActor();
   
-  ImGui::End();
+  if (clickedActor != nullptr)
+  {
+      const auto& actors = scene->actors();
+      for (size_t i = 0; i < actors.size(); ++i)
+      {
+          if (actors[i].get() == clickedActor)
+          {
+              _selectedActorIndex = (int)i;
+              return clickedActor;
+          }
+      }
+  }
+
+  if (_selectedActorIndex >= 0 && _selectedActorIndex < scene->actorCount())
+    return scene->actors()[_selectedActorIndex].get();
+
+  return nullptr;
 }
 
 }

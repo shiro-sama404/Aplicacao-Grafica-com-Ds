@@ -1,75 +1,64 @@
-//[]---------------------------------------------------------------[]
-//|                                                                 |
-//| Box.h                                                           |
-//|                                                                 |
-//| Box shape for TP1 (AABB - Axis-Aligned Bounding Box)           |
-//|                                                                 |
-//[]---------------------------------------------------------------[]
-
 #pragma once
 
 #include "Shape3.h"
 #include "geometry/Bounds3.h"
-#include "graphics/GLGraphics3.h"
+#include <cstring> // Necessário para memcpy e memset
+#include <algorithm> // Necessário para std::max
 
 namespace cg
-{ // begin namespace cg
+{
 
-//
-// Box: caixa alinhada aos eixos (AABB)
-//
 class Box: public Shape3
 {
 public:
-  Box(float size = 2.0f):
-    _size{size}
+  Box(float size = 1.0f):
+    _dimensions{size, size, size}
   {
     generateMesh();
   }
 
+  // Construtor para Caixa Genérica (com lados independentes)
   Box(float width, float height, float depth):
-    _size{2.0f},
-    _width{width},
-    _height{height},
-    _depth{depth}
+    _dimensions{width, height, depth}
   {
     generateMesh();
   }
 
-  float size() const { return _size; }
+  // Retorna as dimensões completas (width, height, depth)
+  vec3f size() const { return _dimensions; }
 
   vec3f normalAt(const vec3f& P) const override
   {
-    // Determinar qual face baseado em qual componente tem maior magnitude
+    vec3f halfSize = _dimensions * 0.5f;
     vec3f absP = vec3f{std::abs(P.x), std::abs(P.y), std::abs(P.z)};
-    float hs = _size / 2.0f;
     
-    if (std::abs(absP.x - hs) < 0.001f)
-      return vec3f{P.x > 0 ? 1.0f : -1.0f, 0, 0};
-    if (std::abs(absP.y - hs) < 0.001f)
-      return vec3f{0, P.y > 0 ? 1.0f : -1.0f, 0};
-    if (std::abs(absP.z - hs) < 0.001f)
-      return vec3f{0, 0, P.z > 0 ? 1.0f : -1.0f};
+    constexpr float epsilon = 0.001f;
+
+    // Verifica colisão com planos X, Y ou Z independentemente
+    if (std::abs(absP.x - halfSize.x) < epsilon)
+      return vec3f{P.x > 0 ? 1.0f : -1.0f, 0.0f, 0.0f};
+      
+    if (std::abs(absP.y - halfSize.y) < epsilon)
+      return vec3f{0.0f, P.y > 0 ? 1.0f : -1.0f, 0.0f};
+      
+    if (std::abs(absP.z - halfSize.z) < epsilon)
+      return vec3f{0.0f, 0.0f, P.z > 0 ? 1.0f : -1.0f};
     
-    // Fallback: normalizar P (aproximação)
+    // Fallback seguro
     return P.versor();
   }
 
   bool intersect(const Ray3f& ray, float& distance) const override
   {
-    // Interseção raio-AABB usando método de Bounds3
-    // Box centrada na origem com lados de tamanho _size
-    float hs = _size / 2.0f;
-    Bounds3f bounds{
-      vec3f{-hs, -hs, -hs},
-      vec3f{hs, hs, hs}
-    };
+    vec3f halfSize = _dimensions * 0.5f;
+    
+    // Bounds agora respeita a largura/altura/profundidade reais
+    Bounds3f bounds{ -halfSize, halfSize };
     
     float tMin, tMax;
     if (!bounds.intersect(ray, tMin, tMax))
       return false;
     
-    // Escolher menor t positivo dentro do range do raio
     float t = tMin > 0 ? tMin : tMax;
     
     if (t > 0 && t < distance)
@@ -83,63 +72,67 @@ public:
 
   Bounds3f bounds() const override
   {
-    float hs = _size / 2.0f;
-    return Bounds3f{
-      vec3f{-hs, -hs, -hs},
-      vec3f{hs, hs, hs}
-    };
+    vec3f halfSize = _dimensions * 0.5f;
+    return Bounds3f{ -halfSize, halfSize };
   }
 
 protected:
-  float _size;
-  float _width, _height, _depth;
+  vec3f _dimensions; 
 
   void generateMesh() override
   {
-    // Usar a função box() de GLGraphics3 para obter malha de AABB
-    // de lados 2 centrada na origem
-    auto boxMesh = GLGraphics3::box();
-    if (boxMesh)
+    constexpr int nv = 24;
+    constexpr int nt = 12;
+
+    // --- DADOS ESTÁTICOS  ---
+    static const vec3f rawNormals[nv] = {
+        {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1},     // Frente
+        {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, // Trás
+        {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0}, // Esquerda
+        {1, 0, 0}, {1, 0, 0}, {1, 0, 0}, {1, 0, 0},     // Direita
+        {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0},     // Topo
+        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}  // Base
+    };
+
+    static const vec3f rawVertices[nv] = {
+        {-1, -1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1},     // Frente
+        {1, -1, -1}, {-1, -1, -1}, {-1, 1, -1}, {1, 1, -1}, // Trás
+        {-1, -1, -1}, {-1, -1, 1}, {-1, 1, 1}, {-1, 1, -1}, // Esquerda
+        {1, -1, 1}, {1, -1, -1}, {1, 1, -1}, {1, 1, 1},     // Direita
+        {-1, 1, 1}, {1, 1, 1}, {1, 1, -1}, {-1, 1, -1},     // Topo
+        {-1, -1, -1}, {1, -1, -1}, {1, -1, 1}, {-1, 1, 1}   // Base
+    };
+
+    static const int rawIndices[nt * 3] = {
+        0, 1, 2, 2, 3, 0,       4, 5, 6, 6, 7, 4,
+        8, 9, 10, 10, 11, 8,    12, 13, 14, 14, 15, 12,
+        16, 17, 18, 18, 19, 16, 20, 21, 22, 22, 23, 20
+    };
+
+    // --- ALOCAÇÃO ---
+    vec3f* vertices = new vec3f[nv];
+    vec3f* normals = new vec3f[nv];
+    vec2f* uvs = new vec2f[1];
+    TriangleMesh::Triangle* triangles = new TriangleMesh::Triangle[nt];
+
+    std::memcpy(normals, rawNormals, nv * sizeof(vec3f));
+    std::memcpy(triangles, rawIndices, nt * sizeof(TriangleMesh::Triangle));
+
+    vec3f halfSize = _dimensions * 0.5f;
+
+    for (int i = 0; i < nv; ++i)
     {
-      // Copiar dados da malha
-      const auto& data = boxMesh->data();
-      
-      int vertexCount = data.vertexCount;
-      int triangleCount = data.triangleCount;
-      
-      vec3f* vertices = new vec3f[vertexCount];
-      vec3f* normals = new vec3f[vertexCount];
-      vec2f* uvs = new vec2f[vertexCount];
-      TriangleMesh::Triangle* triangles = new TriangleMesh::Triangle[triangleCount];
-      
-      // Copiar vértices e normais
-      for (int i = 0; i < vertexCount; ++i)
-      {
-        vertices[i] = data.vertices[i];
-        normals[i] = data.vertexNormals[i];
-        uvs[i] = data.uv ? data.uv[i] : vec2f{0.0f, 0.0f};
-      }
-      
-      // Copiar triângulos
-      for (int i = 0; i < triangleCount; ++i)
-      {
-        triangles[i] = data.triangles[i];
-      }
-      
-      TriangleMesh::Data meshData = {
-        vertexCount,
-        triangleCount,
-        vertices,
-        normals,
-        uvs,
-        triangles
-      };
-      
-      _mesh = new TriangleMesh{std::move(meshData)};
+        vertices[i].x = rawVertices[i].x * halfSize.x;
+        vertices[i].y = rawVertices[i].y * halfSize.y;
+        vertices[i].z = rawVertices[i].z * halfSize.z;
     }
+
+    TriangleMesh::Data meshData = {
+      nv, nt, vertices, normals, uvs, triangles
+    };
+
+    _mesh = new TriangleMesh{std::move(meshData)};
   }
+};
 
-}; // Box
-
-} // end namespace cg
-
+} // namespace cg

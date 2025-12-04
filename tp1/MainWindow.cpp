@@ -6,94 +6,76 @@
 namespace cg
 {
 
-void
-MainWindow::initialize()
+void MainWindow::initialize()
 {
-  _scene = SceneBuilder::buildDefaultScene();
-  
-  auto camera = new Camera;
-  
-  // Configuração inicial da câmera: Orbitando a origem (0,0,0).
-  vec3f origin{0, 0, 0};
-  vec3f initialPos{0, 0, 15};
-  float dist = (initialPos - origin).length();
-  
-  camera->setPosition(initialPos);
-  camera->setDistance(dist);
-  camera->setClippingPlanes(0.1f, 100.0f);
-  camera->setProjectionType(Camera::Perspective);
-  camera->setViewAngle(45.0f);
-  camera->setEulerAngles({0, 0, 0});
-  camera->setAspectRatio((float)width() / (float)height());
-  
-  // Ajuste de precisão: Garante que o ponto focal (LookAt) seja exatamente a origem.
-  // O ponto focal é derivado de Posição + Direção * Distância.
-  vec3f currentFocal = camera->focalPoint();
-  if ((currentFocal - origin).length() > 0.1f)
-  {
-    vec3f direction = (origin - initialPos).versor();
-    vec3f newPos = origin - direction * dist;
-    camera->setPosition(newPos);
-  }
+    GLRenderWindow3::initialize();
 
-  // Inicialização do pipeline de Rasterização (OpenGL).
-  _renderer = new PBRRenderer{*_scene, *camera};
-  _renderer->setImageSize(width(), height());
+    _scene = SceneBuilder::buildDefaultScene();
 
-  // Inicialização do pipeline de Ray Casting (CPU) para seleção e renderização alternativa.
-  _rayCaster = new RayCaster{*_scene, *camera};
-  _rayCaster->setImageSize(width(), height());
+    auto camera = this->camera();
+    SharedObject::makeUse(camera);
 
-  // Configuração de estado global do OpenGL.
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-  glFrontFace(GL_CCW);
+    // Configuração inicial da câmera: Orbitando a origem (0,0,0).
+    vec3f initialPos{0, 0, 15};
 
-  printf("MainWindow initialized\n");
-  printf("Scene: %d actors, %d lights\n", 
-         _scene->actorCount(), 
-         _scene->lightCount());
+    camera->setTransform(initialPos, quatf::identity());
+    camera->setDistance(15.0f);
+    camera->setClippingPlanes(0.1f, 100.0f);
+    camera->setProjectionType(Camera::Perspective);
+    camera->setViewAngle(45.0f);
+    camera->setEulerAngles({0, 0, 0});
+    camera->setAspectRatio((float)width() / (float)height());
+
+    // Inicialização do pipeline de Rasterização (OpenGL).
+    _renderer = new PBRRenderer{*_scene, *camera};
+    _renderer->setImageSize(width(), height());
+
+    // Inicialização do pipeline de Ray Casting (CPU) para seleção e renderização alternativa.
+    _rayCaster = new RayCaster{*_scene, *camera};
+    _rayCaster->setImageSize(width(), height());
+
+    // Configuração de estado global do OpenGL.
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+
+    printf("MainWindow initialized\n");
+    printf("Scene: %d actors, %d lights\n", 
+            _scene->actorCount(), 
+            _scene->lightCount());
 }
 
 void MainWindow::update()
 {
-  // Atualização do estado da aplicação (se necessário).
-  // Por enquanto, vazio - pode ser usado para animações ou lógica de atualização.
+    camera()->update();
 }
 
 void MainWindow::resetScene()
 {
-  // Preserva o estado atual da câmera (transformação) antes de recriar a cena.
-  auto oldCam = _renderer->camera();
-  vec3f pos = oldCam->position();
-  vec3f angles = oldCam->eulerAngles();
+    _resetRequested = false;
+    _selectedActor = nullptr;
 
-  // Liberação de memória das estruturas antigas.
-  delete _renderer;
-  delete _scene;
-  
-  _scene = SceneBuilder::buildDefaultScene();
-  
-  // Reinstanciação da câmera com parâmetros preservados.
-  auto camera = new Camera;
-  camera->setPosition(pos);
-  camera->setEulerAngles(angles);
-  camera->setClippingPlanes(0.1f, 100.0f);
-  camera->setProjectionType(Camera::Perspective);
-  camera->setViewAngle(45.0f);
-  camera->setAspectRatio((float)width() / (float)height());
+    if (_rayCaster)
+    {
+        delete _rayCaster;
+        _rayCaster = nullptr;
+    }
 
-  _renderer = new PBRRenderer{*_scene, *camera};
-  _renderer->setImageSize(width(), height());
-  
-  // Reconstrução do RayCaster e BVH.
-  delete _rayCaster;
-  _rayCaster = new RayCaster{*_scene, *camera};
-  _rayCaster->setImageSize(width(), height());
-  
-  if (_useRayCaster && _rayCaster)
-    _rayCaster->rebuildBVH();
+    if (_renderer)
+    {
+        delete _renderer;
+        _renderer = nullptr;
+    }
+
+    _scene = SceneBuilder::buildDefaultScene();
+   
+    auto currentCam = this->camera();
+    _renderer = new PBRRenderer{*_scene, *currentCam};
+    _renderer->setImageSize(width(), height());
+    
+    _rayCaster = new RayCaster{*_scene, *currentCam };
+    _rayCaster->setImageSize(width(), height());
 }
 
 bool MainWindow::windowResizeEvent(int width, int height)
@@ -253,7 +235,6 @@ bool MainWindow::scrollEvent(double xOffset, double yOffset)
     auto cam = camera();
     if (cam)
     {
-        // Zoom via alteração da distância ou FOV.
         float zoomFactor = (yOffset > 0) ? 1.1f : 0.9f;
         cam->zoom(zoomFactor);
     }
@@ -278,89 +259,75 @@ bool MainWindow::onMouseLeftPress(int x, int y)
     
     // Sincroniza a seleção com o renderizador OpenGL para feedback visual (e.g., Bounding Box).
     if (_renderer)
-    {
         _renderer->setSelectedActor(_selectedActor);
-    }
     
     if (_selectedActor)
-    {
-        printf("Selected Actor: %s\n", _selectedActor->name());
-        return true; // Retorna true para consumir o evento e evitar início de arrasto.
-    }
+        return true;
     
     return false;
 }
 
-Camera*
-MainWindow::camera()
+Camera* MainWindow::getCamera()
 {
-  if (_useRayCaster && _rayCaster)
-    return _rayCaster->camera();
-  else if (_renderer)
-    return _renderer->camera();
-  return nullptr;
+    return camera();
 }
 
 void MainWindow::render()
 {
-  if (_isMinimized) return;
-  
-  // Pipeline de Ray Tracing (CPU).
-  if (_useRayCaster)
-  {
-    if (_rayCaster != nullptr)
+    if (_resetRequested)
     {
-        auto cam = _rayCaster->camera();
-        if (!cam) return;
-
-        bool imageInvalid = (!_image || _image->width() != width() || _image->height() != height());
-        
-        // Otimização: Recalcula a imagem apenas se a câmera mudou ou houve resize.
-        // Utiliza Timestamp para detecção de mudanças (Dirty Flag).
-        uint32_t currentStamp = cam->timestamp();
-        // Nota: _cameraTimestamp deve ser definido como membro da classe (private).
-        // Assumindo existência de membro estático ou variável de instância para controle.
-        static uint32_t lastCameraTimestamp = 0; 
-        bool cameraChanged = (currentStamp != lastCameraTimestamp);
-
-        if (imageInvalid || cameraChanged)
-        {
-            if (imageInvalid)
-            {
-                 if (_image) delete _image; 
-                 _image = new GLImage(width(), height());
-                 _rayCaster->setImageSize(width(), height());
-            }
-                 
-            // Disparo de raios (Renderização bloqueante).
-            _rayCaster->renderImage(*_image);
-            
-            lastCameraTimestamp = currentStamp;
-        }
-        
-        // Exibe o buffer de imagem gerado como uma textura OpenGL.
-        if (_image)
-            _image->draw(0, 0);
+        resetScene();
+        return;
     }
-  }
-  else
-  {
-    // Pipeline de Rasterização padrão (OpenGL).
-    if (_renderer != nullptr)
-      _renderer->render();
-  }
+
+    if (_isMinimized) return;
+
+    // Pipeline do Ray Caster.
+    if (_enableRayCaster)
+    {
+        if (_rayCaster)
+        {
+            auto camera = this->camera();
+            if (!camera) return;
+
+            bool imageInvalid = (!_image || _image->width() != width() || _image->height() != height());
+            uint32_t currentStamp = camera->timestamp();
+            static uint32_t lastCameraTimestamp = 0; 
+            bool cameraChanged = (currentStamp != lastCameraTimestamp);
+
+            if (imageInvalid || cameraChanged)
+            {
+                if (imageInvalid)
+                {
+                    _image = new GLImage(width(), height());
+                    _rayCaster->setImageSize(width(), height());
+                }
+                _rayCaster->renderImage(camera, _image);
+                lastCameraTimestamp = currentStamp;
+            }
+            
+            // Exibe o buffer de imagem gerado como uma textura OpenGL.
+            if (_image)
+                _image->draw(0, 0);
+        }
+    }
+    else
+    {
+        // Pipeline de Rasterização padrão (OpenGL).
+        if (_renderer != nullptr)
+            _renderer->render();
+    }
 }
 
-void
-MainWindow::gui()
+void MainWindow::gui()
 {
-  if (_gui) _gui->draw();
+    if (_gui) _gui->draw();
 }
 
-void
-MainWindow::terminate()
+void MainWindow::terminate()
 {
-  printf("MainWindow terminated\n");
+    delete _renderer;
+    printf("MainWindow terminated\n");
 }
 
 }

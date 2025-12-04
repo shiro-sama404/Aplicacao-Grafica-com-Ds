@@ -24,7 +24,6 @@ public:
     _renderer{nullptr},
     _gui{nullptr} 
   {
-    // Inicializa o subsistema de GUI com referência à janela pai.
     _gui = new GUIInitializer(*this);
   }
 
@@ -47,8 +46,7 @@ public:
   bool onMouseLeftPress(int x, int y) override;
 
   // --- Acesso e Controle de Estado ---
-
-  Camera* camera();
+  Camera* getCamera();
   Scene* scene() { return _scene; }
   
   PBRActor* selectedActor() const { return _selectedActor; }
@@ -56,10 +54,11 @@ public:
   
   // Reinicia a geometria da cena para o estado inicial.
   void resetScene();
+  void scheduleSceneReset() { _resetRequested = true; }
   
   // Controle de alternância entre pipelines de renderização.
-  bool useRayCaster() const { return _useRayCaster; }
-  void setUseRayCaster(bool use) { _useRayCaster = use; }
+  bool useRayCaster() const { return _enableRayCaster; }
+  void setUseRayCaster(bool use) { _enableRayCaster = use; }
   
   PBRRenderer* pbrRenderer() const { return _renderer; }
   RayCaster* rayCaster() const { return _rayCaster; }
@@ -81,16 +80,17 @@ protected:
   void terminate() override;
 
 private:
-  Reference<Scene> _scene;
-  Reference<GLImage> _image;
   PBRRenderer* _renderer;   // Pipeline de Rasterização (OpenGL)
   RayCaster* _rayCaster;    // Pipeline de Ray Casting (CPU)
   GUIInitializer* _gui;
+  Reference<Scene> _scene;
+  Reference<GLImage> _image;
   Reference<PBRActor> _selectedActor = nullptr;
   
   uint32_t _cameraTimestamp = 0;
   
-  bool _useRayCaster = false; // Flag de controle do renderizador ativo.
+  bool _enableRayCaster = false; // Flag de controle do renderizador ativo.
+  bool _resetRequested = false;
 
   // Variáveis de estado para controle de câmera e input.
   bool _isMinimized = false;

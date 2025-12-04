@@ -21,16 +21,6 @@ public:
   {
   }
 
-  ~Scene()
-  {
-    // Liberação de memória dos atores e luzes alocados.
-    for (auto actor : _actors)
-      delete actor;
-    
-    for (auto light : _lights)
-      delete light;
-  }
-
   const char* name() const
   {
     return _name.c_str();
@@ -51,7 +41,11 @@ public:
 
   void removeActor(PBRActor* actor)
   {
-    auto it = std::find(_actors.begin(), _actors.end(), actor);
+    auto it = std::find_if(_actors.begin(), _actors.end(), 
+      [actor](const Reference<PBRActor>& ref) {
+        return ref.get() == actor; 
+      });
+
     if (it != _actors.end())
       _actors.erase(it);
   }
@@ -61,7 +55,7 @@ public:
     return (int)_actors.size();
   }
 
-  const std::vector<PBRActor*>& actors() const
+  const std::vector<Reference<PBRActor>>& actors() const
   {
     return _actors;
   }
@@ -84,7 +78,11 @@ public:
 
   void removeLight(Light* light)
   {
-    auto it = std::find(_lights.begin(), _lights.end(), light);
+    auto it = std::find_if(_lights.begin(), _lights.end(), 
+      [light](const Reference<Light>& ref) {
+        return ref.get() == light; 
+      });
+
     if (it != _lights.end())
       _lights.erase(it);
   }
@@ -94,7 +92,7 @@ public:
     return (int)_lights.size();
   }
 
-  const std::vector<Light*>& lights() const
+  const std::vector<Reference<Light>>& lights() const
   {
     return _lights;
   }
@@ -107,23 +105,17 @@ public:
     return nullptr;
   }
 
-  // Reseta a cena, removendo e desalocando todos os objetos contidos.
+  // Reseta a cena.
   void clear()
   {
-    for (auto actor : _actors)
-      delete actor;
     _actors.clear();
-
-    for (auto light : _lights)
-      delete light;
     _lights.clear();
   }
 
 private:
   std::string _name;
-  std::vector<PBRActor*> _actors;
-  std::vector<Light*> _lights;
-
+  std::vector<Reference<PBRActor>> _actors;
+  std::vector<Reference<Light>> _lights;
 };
 
 }
