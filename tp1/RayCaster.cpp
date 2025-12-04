@@ -93,17 +93,14 @@ bool RayCaster::intersect(const Ray3f& ray, Intersection& hit)
   // Tentativa de interseção via BVH.
   bool found = _bvh->intersect(ray, hit);
   
-  if (!found && _bruteIntersect)
+  if (!found && _bruteIntersect) // Deixei _bruteforce configurado em true (sinceramente não é ideal mas pra isso aq ta ok)
   {
     // Fallback: Busca linear para garantir robustez caso o BVH falhe ou não cubra objetos dinâmicos.
     PBRActor* closestActor = nullptr;
     float closestDistance = ray.tMax;
-    
-    //printf("intersect 1");
 
     for (const auto& actorRef : _scene->actors())
     {
-      // Extrai o ponteiro bruto (T*) do wrapper Reference<T>
       PBRActor* actor = actorRef.get();
 
       if (!actor->isVisible())
@@ -120,8 +117,6 @@ bool RayCaster::intersect(const Ray3f& ray, Intersection& hit)
         }
       }
     }
-    
-    //printf("intersect 2\n");
     
     if (closestActor != nullptr)
     {
@@ -387,10 +382,10 @@ void RayCaster::renderImage(Camera* camera, Image* image)
 // Executa seleção de objetos via Ray Casting (Picking).
 PBRActor* RayCaster::selectActor(int x, int y)
 {
-  if (_bvh == nullptr || _bvh->empty())
+  if (!_bvh || _bvh->empty())
   {
     buildBVH();
-    if (_bvh == nullptr || _bvh->empty())
+    if (!_bvh || _bvh->empty())
       return nullptr;
   }
   

@@ -37,7 +37,6 @@ add_executable(tp1
   Shape3.h
   Plane.h
   Sphere.h
-  Cube.h
   Box.h
   RayCaster.h
   RayCaster.cpp

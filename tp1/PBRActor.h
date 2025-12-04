@@ -96,7 +96,7 @@ public:
   
   bool intersect(const Ray3f& ray, Intersection& hit) const
   {
-    if (_shape == nullptr)
+    if (!_shape || !isVisible())
       return false;
     
     // Transformação do Raio: Mundo -> Local

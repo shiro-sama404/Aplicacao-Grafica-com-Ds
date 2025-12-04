@@ -61,7 +61,7 @@ private:
   Reference<BVH<PBRActor>> _bvh;
   Reference<Scene> _scene;
   Viewport _viewport;
-  bool _bruteIntersect = false;
+  bool _bruteIntersect = true;
 
   // Métodos internos do pipeline de Ray Tracing
 

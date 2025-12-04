@@ -2,8 +2,8 @@
 
 #include "Shape3.h"
 #include "geometry/Bounds3.h"
-#include <cstring> // Necessário para memcpy e memset
-#include <algorithm> // Necessário para std::max
+#include <cstring>
+#include <algorithm>
 
 namespace cg
 {
@@ -17,7 +17,6 @@ public:
     generateMesh();
   }
 
-  // Construtor para Caixa Genérica (com lados independentes)
   Box(float width, float height, float depth):
     _dimensions{width, height, depth}
   {
@@ -44,15 +43,12 @@ public:
     if (std::abs(absP.z - halfSize.z) < epsilon)
       return vec3f{0.0f, 0.0f, P.z > 0 ? 1.0f : -1.0f};
     
-    // Fallback seguro
     return P.versor();
   }
 
   bool intersect(const Ray3f& ray, float& distance) const override
   {
     vec3f halfSize = _dimensions * 0.5f;
-    
-    // Bounds agora respeita a largura/altura/profundidade reais
     Bounds3f bounds{ -halfSize, halfSize };
     
     float tMin, tMax;
@@ -100,7 +96,7 @@ protected:
         {-1, -1, -1}, {-1, -1, 1}, {-1, 1, 1}, {-1, 1, -1}, // Esquerda
         {1, -1, 1}, {1, -1, -1}, {1, 1, -1}, {1, 1, 1},     // Direita
         {-1, 1, 1}, {1, 1, 1}, {1, 1, -1}, {-1, 1, -1},     // Topo
-        {-1, -1, -1}, {1, -1, -1}, {1, -1, 1}, {-1, 1, 1}   // Base
+        {-1, -1, -1}, {1, -1, -1}, {1, -1, 1}, {-1, -1, 1}   // Base
     };
 
     static const int rawIndices[nt * 3] = {
