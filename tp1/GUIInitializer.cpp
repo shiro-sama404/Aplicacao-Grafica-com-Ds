@@ -209,7 +209,12 @@ void GUIInitializer::drawMaterialControls()
     {
       bool isSelected = (_selectedActorIndex == i);
       if (ImGui::Selectable(actors[i]->name(), isSelected))
+      {
+        _window.setSelectedActor(actors[i].get());
+        PBRRenderer* renderer = _window.pbrRenderer();
+        if (renderer) renderer->setSelectedActor(actors[i].get());
         _selectedActorIndex = i;
+      }
       if (isSelected) ImGui::SetItemDefaultFocus();
     }
     ImGui::EndCombo();
