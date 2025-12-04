@@ -320,7 +320,10 @@ RayTracer::shade(const Ray3f& ray,
   if (NV > 0)
     N.negate(), NV = -NV;
 
+  // Calculate reflection vector: R = V - 2 * (N · V) * N
+  // V points towards the surface, so we reflect it off the normal
   auto R = V - (2 * NV) * N; // reflection vector
+  R.normalize(); // Ensure R is normalized for specular calculations
   // Start with ambient lighting
   auto m = primitive->material();
   auto color = _scene->ambientLight * m->ambient;
@@ -358,9 +361,13 @@ RayTracer::shade(const Ray3f& ray,
     auto lc = light->lightColor(d);
 
     color += lc * m->diffuse * NL;
-    if (m->shine <= 0 || (d = R.dot(L)) <= 0)
-      continue;
-    color += lc * m->spot * pow(d, m->shine);
+    // Calculate specular highlight using reflection vector
+    if (m->shine > 0)
+    {
+      auto RL = R.dot(L);
+      if (RL > 0)
+        color += lc * m->spot * pow(RL, m->shine);
+    }
   }
   // Compute specular reflection
   if (m->specular != Color::black)
