@@ -1,0 +1,175 @@
+include "colors.inc"
+
+material "GlassContainer"
+{
+  ambient  White * 0.1
+  diffuse  White * 0.1
+  spot     White * 0.5
+  shine    100
+  specular White * 0.2
+  transparency White * 0.92
+  ior 1.5
+}
+
+material "RedOpaque"
+{
+  ambient  Red * 0.3
+  diffuse  Red
+  spot     Red * 0.5
+  shine    80
+  specular Black
+  transparency Black
+  ior 1.0
+}
+
+material "GreenOpaque"
+{
+  ambient  Green * 0.3
+  diffuse  Green
+  spot     Green * 0.5
+  shine    80
+  specular Black
+  transparency Black
+  ior 1.0
+}
+
+material "BlueOpaque"
+{
+  ambient  Blue * 0.3
+  diffuse  Blue
+  spot     Blue * 0.5
+  shine    80
+  specular Black
+  transparency Black
+  ior 1.0
+}
+
+material "Floor"
+{
+  ambient  Gray * 0.3
+  diffuse  Gray
+  spot     Gray * 0.3
+  shine    50
+  specular Black
+  transparency Black
+  ior 1.0
+}
+
+scene
+{
+  environment
+  {
+    background DarkGray
+    ambient VeryLightGray * 0.2
+  }
+
+  object "Main Camera"
+  {
+    define pos <0, 2, 10>
+    define target <0, 0, 0>
+    define vpn pos - target
+    
+    transform
+    {
+      position pos
+      rotation axes(vpn, <0,1,0>)
+    }
+    camera
+    {
+      perspective
+      angle 45
+    }
+  }
+
+  object "Lights"
+  {
+    object
+    {
+      transform
+      {
+        position <0, 0, 0>
+      }
+      light
+      {
+        point
+        color White * 1.5
+        falloff 0
+      }
+    }
+
+    object
+    {
+      transform
+      {
+        position <8, 8, 8>
+      }
+      light
+      {
+        point
+        color White * 0.5
+        falloff 0
+      }
+    }
+  }
+
+  object "Floor"
+  {
+    transform
+    {
+      position <0, -3, 0>
+      scale <15, 0.1, 15>
+    }
+    mesh "Plane" material "Floor"
+  }
+
+  object "Glass Container"
+  {
+    transform
+    {
+      position <0, 0, 0>
+      scale vec3(2.5)
+    }
+    mesh "Sphere" material "GlassContainer"
+  }
+
+  object "Red Sphere"
+  {
+    transform
+    {
+      position <4, 0, 0>
+      scale vec3(1.2)
+    }
+    mesh "Sphere" material "RedOpaque"
+  }
+
+  object "Green Sphere"
+  {
+    transform
+    {
+      position <-4, 0, 0>
+      scale vec3(1.2)
+    }
+    mesh "Sphere" material "GreenOpaque"
+  }
+
+  object "Blue Sphere"
+  {
+    transform
+    {
+      position <0, 0, 4>
+      scale vec3(1.2)
+    }
+    mesh "Sphere" material "BlueOpaque"
+  }
+
+  object "Yellow Sphere"
+  {
+    transform
+    {
+      position <0, 0, -4>
+      scale vec3(1.2)
+    }
+    mesh "Sphere" material "RedOpaque"
+  }
+}
+

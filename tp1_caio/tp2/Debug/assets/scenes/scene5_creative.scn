@@ -1,0 +1,230 @@
+include "colors.inc"
+
+material "Glass"
+{
+  ambient  White * 0.1
+  diffuse  White * 0.1
+  spot     White * 0.5
+  shine    100
+  specular White * 0.2
+  transparency White * 0.9
+  ior 1.5
+}
+
+material "Diamond"
+{
+  ambient  White * 0.1
+  diffuse  White * 0.1
+  spot     White * 0.8
+  shine    150
+  specular White * 0.5
+  transparency White * 0.95
+  ior 2.4
+}
+
+material "Water"
+{
+  ambient  LightBlue * 0.2
+  diffuse  LightBlue * 0.2
+  spot     LightBlue * 0.6
+  shine    90
+  specular White * 0.3
+  transparency LightBlue * 0.8
+  ior 1.33
+}
+
+material "RedGem"
+{
+  ambient  Red * 0.3
+  diffuse  Red * 0.5
+  spot     Red * 0.7
+  shine    120
+  specular Red * 0.4
+  transparency Red * 0.6
+  ior 1.7
+}
+
+material "Base"
+{
+  ambient  Gold * 0.3
+  diffuse  Gold
+  spot     Gold * 0.6
+  shine    100
+  specular Gold * 0.3
+  transparency Black
+  ior 1.0
+}
+
+material "Floor"
+{
+  ambient  Gray * 0.3
+  diffuse  Gray
+  spot     Gray * 0.3
+  shine    50
+  specular Black
+  transparency Black
+  ior 1.0
+}
+
+scene
+{
+  environment
+  {
+    background DarkGray
+    ambient VeryLightGray * 0.3
+  }
+
+  object "Main Camera"
+  {
+    define pos <0, 4, 12>
+    define target <0, 0.5, 0>
+    define vpn pos - target
+    
+    transform
+    {
+      position pos
+      rotation axes(vpn, <0,1,0>)
+    }
+    camera
+    {
+      perspective
+      angle 45
+    }
+  }
+
+  object "Lights"
+  {
+    object
+    {
+      transform
+      {
+        position <8, 8, 8>
+      }
+      light
+      {
+        point
+        color White
+        falloff 0
+      }
+    }
+
+    object
+    {
+      transform
+      {
+        position <-8, 8, 8>
+      }
+      light
+      {
+        point
+        color White
+        falloff 0
+      }
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, 10, -5>
+      }
+      light
+      {
+        point
+        color White * 0.8
+        falloff 0
+      }
+    }
+  }
+
+  object "Floor"
+  {
+    transform
+    {
+      position <0, -2, 0>
+      scale <20, 0.1, 20>
+    }
+    mesh "Plane" material "Floor"
+  }
+
+  object "Base"
+  {
+    transform
+    {
+      position <0, -1, 0>
+      scale <2, 0.3, 2>
+    }
+    mesh "Box" material "Base"
+  }
+
+  object "Outer Glass Sphere"
+  {
+    transform
+    {
+      position <0, 0.5, 0>
+      scale vec3(2.5)
+    }
+    mesh "Sphere" material "Glass"
+  }
+
+  object "Water Sphere"
+  {
+    transform
+    {
+      position <0, 0.5, 0>
+      scale vec3(1.8)
+    }
+    mesh "Sphere" material "Water"
+  }
+
+  object "Diamond Sphere"
+  {
+    transform
+    {
+      position <0, 0.5, 0>
+      scale vec3(1.0)
+    }
+    mesh "Sphere" material "Diamond"
+  }
+
+  object "Red Gem 1"
+  {
+    transform
+    {
+      position <3, 1, 0>
+      scale vec3(0.6)
+    }
+    mesh "Sphere" material "RedGem"
+  }
+
+  object "Red Gem 2"
+  {
+    transform
+    {
+      position <-3, 1, 0>
+      scale vec3(0.6)
+    }
+    mesh "Sphere" material "RedGem"
+  }
+
+  object "Red Gem 3"
+  {
+    transform
+    {
+      position <0, 1, 3>
+      scale vec3(0.6)
+    }
+    mesh "Sphere" material "RedGem"
+  }
+
+  object "Red Gem 4"
+  {
+    transform
+    {
+      position <0, 1, -3>
+      scale vec3(0.6)
+    }
+    mesh "Sphere" material "RedGem"
+  }
+}
+
