@@ -20,7 +20,7 @@ Este projeto consiste na aplicação de renderização baseada em física (PBR)
 requisitada no Trabalho Prático 1.
 
 Adicionalmente, conforme permitido nas instruções da Prova 2, esta aplicação
-já integra as funcionalidades requisitadas na avaliação prática P2 (as funcionalidades da P2 não interferem com os objetivos do TP1:
+já integra as funcionalidades requisitadas na avaliação prática P2 (as funcionalidades da P2 não interferem com os objetivos do TP1):
 
 1. Primitiva 'Box' (Caixa/AABB):
    - Implementada na classe 'Box' (derivada de Shape3).
