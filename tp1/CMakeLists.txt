@@ -12,7 +12,7 @@ if(MSVC)
 endif()
 
 # Definir diretórios do cg (biblioteca do professor)
-set(CG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../cg")
+set(CG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../cg")
 set(CG_BUILD_DIR "${CMAKE_BINARY_DIR}/cg_build")
 
 # Adicionar cg como subdirectory
