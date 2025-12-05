@@ -279,8 +279,8 @@ MainWindow::mainMenu()
         0.01f,
         0.0f,
         1.0f);
-      ImGui::DragInt("Max Subdiv Level",
-        &_maxSubdivLevel,
+      ImGui::DragInt("Max Subdivisionv Level",
+        &_maxSubdivisionLevel,
         1.0f,
         0,
         4);
@@ -365,7 +365,7 @@ MainWindow::renderScene()
     _rayTracer->setMaxRecursionLevel(_maxRecursionLevel);
     _rayTracer->setMinWeight(_minWeight);
     _rayTracer->setAdaptiveThreshold(_adaptiveThreshold);
-    _rayTracer->setMaxSubdivLevel(_maxSubdivLevel);
+    _rayTracer->setMaxSubdivisionLevel(_maxSubdivisionLevel);
     _rayTracer->setUseJitter(_useJitter);
     _rayTracer->setSceneIOR(_sceneIOR);
     _rayTracer->renderImage(*_image);

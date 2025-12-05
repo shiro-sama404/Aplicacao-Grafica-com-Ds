@@ -65,7 +65,7 @@ RayTracer::RayTracer(SceneBase& scene, Camera& camera):
   _maxRecursionLevel{6},
   _minWeight{minMinWeight},
   _adaptiveThreshold{0.1f},
-  _maxSubdivLevel{2},
+  _maxSubdivisionLevel{2},
   _useJitter{false},
   _sceneIOR{1.0f}
 {
@@ -182,7 +182,7 @@ RayTracer::setPixelRay(float x, float y)
 void
 RayTracer::scan(Image& image)
 {
-  if (_maxSubdivLevel == 0)
+  if (_maxSubdivisionLevel == 0)
   {
     // No antialiasing - use original method
     ImageBuffer scanLine{_viewport.w, 1};
@@ -214,7 +214,7 @@ RayTracer::scan(Image& image)
     {
       printf("Scanning line %d of %d\r", j + 1, _viewport.h);
       for (auto i = 0; i < _viewport.w; i++)
-        scanLine[i] = samplePixel((float)i, (float)j, 0, rayBuffer);
+        scanLine[i] = samplePixel((float)i, (float)j, rayBuffer);
       image.setData(0, j, scanLine);
     }
   }
@@ -232,8 +232,13 @@ RayTracer::shoot(float x, float y)
   // set pixel ray
   setPixelRay(x, y);
 
+  // Initialize IOR stack with scene IOR
+  std::vector<float> iorStack;
+  iorStack.reserve(8); // Optimization: Pre-allocate to avoid reallocs
+  iorStack.push_back(_sceneIOR);
+
   // trace pixel ray
-  Color color = trace(_pixelRay, 0, 1);
+  Color color = trace(_pixelRay, 0, 1, iorStack);
 
   // adjust RGB color
   if (color.r > 1.0f)
@@ -247,13 +252,13 @@ RayTracer::shoot(float x, float y)
 }
 
 Color
-RayTracer::trace(const Ray3f& ray, uint32_t level, float weight, float currentIOR)
+RayTracer::trace(const Ray3f& ray, uint32_t level, float weight, const std::vector<float>& iorStack)
 //[]---------------------------------------------------[]
 //|  Trace a ray                                        |
 //|  @param the ray                                     |
 //|  @param recursion level                             |
 //|  @param ray weight                                  |
-//|  @param currentIOR - index of refraction of current medium |
+//|  @param iorStack - stack of IORs (passed by ref)    |
 //|  @return color of the ray                           |
 //[]---------------------------------------------------[]
 {
@@ -263,7 +268,7 @@ RayTracer::trace(const Ray3f& ray, uint32_t level, float weight, float currentIO
 
   Intersection hit;
 
-  return intersect(ray, hit) ? shade(ray, hit, level, weight, currentIOR) : background();
+  return intersect(ray, hit) ? shade(ray, hit, level, weight, iorStack) : background();
 }
 
 inline constexpr auto
@@ -297,14 +302,14 @@ RayTracer::shade(const Ray3f& ray,
   Intersection& hit,
   uint32_t level,
   float weight,
-  float currentIOR)
+  const std::vector<float>& iorStack)
 //[]---------------------------------------------------[]
 //|  Shade a point P                                    |
 //|  @param the ray (input)                             |
 //|  @param information on intersection (input)         |
 //|  @param recursion level                             |
 //|  @param ray weight                                  |
-//|  @param currentIOR - index of refraction of current medium |
+//|  @param iorStack - stack of IORs (passed by ref)    |
 //|  @return color at point P                           |
 //[]---------------------------------------------------[]
 {
@@ -316,14 +321,20 @@ RayTracer::shade(const Ray3f& ray,
   const auto& V = ray.direction;
   auto NV = N.dot(V);
 
-  // Make sure "real" normal is on right side
-  if (NV > 0)
-    N.negate(), NV = -NV;
+  // [IMPORTANT] Determine entering/leaving BEFORE flipping normal
+  bool entering = NV < 0; 
 
-  // Calculate reflection vector: R = V - 2 * (N · V) * N
-  // V points towards the surface, so we reflect it off the normal
+  // Make sure "real" normal is on right side (para Phong/Reflexão)
+  if (!entering) // Se NV > 0, estamos saindo (ou normal invertida)
+  {
+      N.negate();
+      NV = -NV; 
+  }
+
+  // Calculate reflection vector: R = V - 2 * (N . V) * N
   auto R = V - (2 * NV) * N; // reflection vector
-  R.normalize(); // Ensure R is normalized for specular calculations
+  R.normalize(); // Ensure R is normalized
+  
   // Start with ambient lighting
   auto m = primitive->material();
   auto color = _scene->ambientLight * m->ambient;
@@ -369,58 +380,95 @@ RayTracer::shade(const Ray3f& ray,
         color += lc * m->spot * pow(RL, m->shine);
     }
   }
+  
   // Compute specular reflection
   if (m->specular != Color::black)
   {
-    weight *= maxRGB(m->specular);
-    if (weight > _minWeight && level < _maxRecursionLevel)
+    float w = weight * maxRGB(m->specular);
+    if (w > _minWeight && level < _maxRecursionLevel)
     {
       auto reflectionRay = Ray3f{P + R * rt_eps(), R};
-      color += m->specular * trace(reflectionRay, level + 1, weight, currentIOR);
+      
+      // [OPTIMIZATION] Reflection doesn't change medium.
+      // Pass original 'iorStack' by const reference. Cost: Zero allocation.
+      color += m->specular * trace(reflectionRay, level + 1, w, iorStack);
     }
   }
   
   // Compute refraction (transparency)
   if (m->transparency != Color::black)
   {
-    // Determine if ray is entering or leaving the object
-    bool entering = NV < 0; // NV is negative when entering
+    // Identify IORs for Snell's Law
+    // n1 = current medium (top of stack)
+    float n1 = iorStack.empty() ? 1.0f : iorStack.back();
+    float n2 = m->ior; // Assume we are entering the object
     
-    float eta1, eta2;
-    if (entering)
+    // If we are exiting, we need to find out where we are going (new top after removing this)
+    if (!entering)
     {
-      eta1 = currentIOR;
-      eta2 = m->ior;
-    }
-    else
-    {
-      eta1 = m->ior;
-      eta2 = currentIOR;
+      // Logic to "look ahead" without modifying the stack yet
+      n1 = m->ior; // We are currently in n1
+      
+      // Reverse search to find the previous IOR
+      bool found = false;
+      for (auto it = iorStack.rbegin(); it != iorStack.rend(); ++it)
+      {
+        // Use epsilon for float comparison
+        if (std::abs(*it - m->ior) < 1e-5f)
+        {
+          // The element *before* this in the stack will be the new medium n2
+          auto nextIt = std::next(it);
+          if (nextIt != iorStack.rend())
+            n2 = *nextIt;
+          else
+            n2 = _sceneIOR; // Stack would become empty
+          found = true;
+          break;
+        }
+      }
+      if (!found) n2 = _sceneIOR; // Fallback
     }
     
-    float eta12 = eta1 / eta2;
-    float C1 = -NV; // cos(theta1) = -dot(L, N) where L is incident direction
-    float discriminant = 1.0f - eta12 * eta12 * (1.0f - C1 * C1);
+    float eta = n1 / n2;
+    float C1 = -NV; // cos(theta1)
+    float discriminant = 1.0f - eta * eta * (1.0f - C1 * C1);
     
     // Check if total internal reflection occurs
     if (discriminant >= 0.0f)
     {
-      float C2 = std::sqrt(discriminant); // cos(theta2)
-      
-      // Calculate refraction direction: T = eta12 * L + (eta12 * C1 - C2) * N
-      vec3f T = eta12 * V + (eta12 * C1 - C2) * N;
+      // Calculate refraction direction
+      vec3f T = eta * V + (eta * C1 - std::sqrt(discriminant)) * N;
       T.normalize();
       
-      float newWeight = weight * maxRGB(m->transparency);
-      if (newWeight > _minWeight && level < _maxRecursionLevel)
+      float w = weight * maxRGB(m->transparency);
+      if (w > _minWeight && level < _maxRecursionLevel)
       {
+        // [COPY-ON-WRITE] Only here we pay the price of copying the stack
+        std::vector<float> nextStack = iorStack; 
+        
+        if (entering)
+        {
+          nextStack.push_back(m->ior);
+        }
+        else
+        {
+          // Advanced removal logic: Find specific IOR from back and remove
+          for (auto it = nextStack.rbegin(); it != nextStack.rend(); ++it)
+          {
+            if (std::abs(*it - m->ior) < 1e-5f)
+            {
+              // std::next(it).base() converts reverse_iterator to iterator pointing to the element
+              nextStack.erase(std::next(it).base());
+              break;
+            }
+          }
+        }
+
         auto refractionRay = Ray3f{P + T * rt_eps(), T};
-        float newIOR = entering ? m->ior : _sceneIOR;
-        Color refractionColor = trace(refractionRay, level + 1, newWeight, newIOR);
-        color += m->transparency * refractionColor;
+        color += m->transparency * trace(refractionRay, level + 1, w, nextStack);
       }
     }
-    // If discriminant < 0, total internal reflection occurs - no refraction
+    // If discriminant < 0, Total Internal Reflection occurs (no refraction contribution added)
   }
   
   return color;
@@ -467,7 +515,6 @@ RayTracer::shadow(const Ray3f& ray)
         return true;
       }
       // If transparent, continue the ray through the object
-      // Move ray origin forward past the intersection
       float newTMin = hit.distance + rt_eps();
       if (newTMin >= currentRay.tMax)
         break; // Past the end of the ray
@@ -485,20 +532,12 @@ arand()
 }
 
 Color
-RayTracer::samplePixel(float x, float y, int level, std::vector<std::vector<Color>>& rayBuffer)
+RayTracer::samplePixel(float x, float y, std::vector<std::vector<Color>>& rayBuffer)
 {
-  if (level >= (int)_maxSubdivLevel)
-  {
-    // Max subdivision level reached - use center of pixel
-    return shoot(x + 0.5f, y + 0.5f);
-  }
-  
-  // Get corner coordinates
+  // Buffer optimization for Level 0 corners
+  Color corners[4];
   int ix = (int)x;
   int iy = (int)y;
-  
-  // Sample four corners
-  Color corners[4];
   float offsets[4][2] = {{0.0f, 0.0f}, {1.0f, 0.0f}, {0.0f, 1.0f}, {1.0f, 1.0f}};
   
   for (int i = 0; i < 4; i++)
@@ -506,7 +545,7 @@ RayTracer::samplePixel(float x, float y, int level, std::vector<std::vector<Colo
     int cx = ix + (int)offsets[i][0];
     int cy = iy + (int)offsets[i][1];
     
-    // Check if ray already traced
+    // Check if ray already traced in buffer
     if (cx <= _viewport.w && cy <= _viewport.h && 
         rayBuffer[cy][cx].r >= 0.0f)
     {
@@ -520,7 +559,13 @@ RayTracer::samplePixel(float x, float y, int level, std::vector<std::vector<Colo
       float py = (float)cy + jitterY;
       
       setPixelRay(px, py);
-      corners[i] = trace(_pixelRay, 0, 1.0f, _sceneIOR);
+      
+      // Create fresh stack for primary ray
+      std::vector<float> stack;
+      stack.reserve(8);
+      stack.push_back(_sceneIOR);
+      
+      corners[i] = trace(_pixelRay, 0, 1.0f, stack);
       
       // Store in buffer
       if (cx <= _viewport.w && cy <= _viewport.h)
@@ -528,48 +573,63 @@ RayTracer::samplePixel(float x, float y, int level, std::vector<std::vector<Colo
     }
   }
   
-  // Calculate average
-  Color avg = (corners[0] + corners[1] + corners[2] + corners[3]) * 0.25f;
-  
-  // Calculate deviations
-  float maxDev = 0.0f;
-  for (int i = 0; i < 4; i++)
-  {
-    Color diff = corners[i] - avg;
-    float dev = std::max(std::max(std::abs(diff.r), std::abs(diff.g)), std::abs(diff.b));
-    maxDev = std::max(maxDev, dev);
-  }
-  
-  // If deviation is small enough, return average
-  if (maxDev < _adaptiveThreshold)
-    return avg;
-  
-  // Otherwise, subdivide
-  return sampleSubpixel(x, y, x + 1.0f, y + 1.0f, level + 1, rayBuffer);
+  // Adaptive recursion starts here
+  return sampleSubpixel(x, y, x + 1.0f, y + 1.0f, 0);
 }
 
 Color
-RayTracer::sampleSubpixel(float x0, float y0, float x1, float y1, int level, std::vector<std::vector<Color>>& rayBuffer)
+RayTracer::sampleSubpixel(float x0, float y0, float x1, float y1, int level)
 {
-  if (level >= (int)_maxSubdivLevel)
-  {
-    // Use center of subpixel
-    float cx = (x0 + x1) * 0.5f;
-    float cy = (y0 + y1) * 0.5f;
-    return shoot(cx, cy);
-  }
+  // Re-calculate or pass corners? 
+  // For simplicity and correctness in recursion, we re-shoot or calculate variance 
+  // based on the 4 corners of the current rect (x0,y0) to (x1,y1).
   
-  // Subdivide into 4 subpixels
+  float jitterX = _useJitter ? arand() : 0.0f;
+  float jitterY = _useJitter ? arand() : 0.0f;
+  
+  // Define corners of this sub-rectangle
+  float coords[4][2] = {{x0,y0}, {x1,y0}, {x0,y1}, {x1,y1}};
+  Color colors[4];
+  Color avg = Color::black;
+  
+  for(int i=0; i<4; ++i)
+  {
+    setPixelRay(coords[i][0] + jitterX, coords[i][1] + jitterY);
+    
+    std::vector<float> stack;
+    stack.reserve(8);
+    stack.push_back(_sceneIOR);
+    
+    colors[i] = trace(_pixelRay, 0, 1.0f, stack);
+    avg += colors[i];
+  }
+  avg *= 0.25f;
+
+  // Calculate deviation
+  float maxDev = 0.0f;
+  for(int i=0; i<4; ++i)
+  {
+    Color diff = colors[i] - avg;
+    float dev = std::max(std::max(std::abs(diff.r), std::abs(diff.g)), std::abs(diff.b));
+    maxDev = std::max(maxDev, dev);
+  }
+
+  // Adaptive check
+  if (maxDev < _adaptiveThreshold || level >= (int)_maxSubdivisionLevel)
+  {
+    return avg;
+  }
+
+  // Subdivide
   float xm = (x0 + x1) * 0.5f;
   float ym = (y0 + y1) * 0.5f;
   
-  Color subColors[4];
-  subColors[0] = sampleSubpixel(x0, y0, xm, ym, level + 1, rayBuffer);
-  subColors[1] = sampleSubpixel(xm, y0, x1, ym, level + 1, rayBuffer);
-  subColors[2] = sampleSubpixel(x0, ym, xm, y1, level + 1, rayBuffer);
-  subColors[3] = sampleSubpixel(xm, ym, x1, y1, level + 1, rayBuffer);
+  Color c1 = sampleSubpixel(x0, y0, xm, ym, level + 1); // Top-Left
+  Color c2 = sampleSubpixel(xm, y0, x1, ym, level + 1); // Top-Right
+  Color c3 = sampleSubpixel(x0, ym, xm, y1, level + 1); // Bottom-Left
+  Color c4 = sampleSubpixel(xm, ym, x1, y1, level + 1); // Bottom-Right
   
-  return (subColors[0] + subColors[1] + subColors[2] + subColors[3]) * 0.25f;
+  return (c1 + c2 + c3 + c4) * 0.25f;
 }
 
 } // end namespace cg

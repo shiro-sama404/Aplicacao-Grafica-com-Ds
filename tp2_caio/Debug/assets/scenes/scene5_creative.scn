@@ -78,7 +78,7 @@ scene
   {
     define pos <0, 4, 12>
     define target <0, 0.5, 0>
-    define vpn pos - target
+    define vpn target - pos
     
     transform
     {

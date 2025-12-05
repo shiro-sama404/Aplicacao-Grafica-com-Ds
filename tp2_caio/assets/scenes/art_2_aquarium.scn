@@ -1,0 +1,411 @@
+include "materials_transparent.inc"
+
+scene
+{
+  environment
+  {
+    background rgb(0.05, 0.05, 0.1)
+    ambient rgb(0.3, 0.3, 0.35)
+  }
+
+  // Câmera
+  object "Main Camera"
+  {
+    define pos <15, 8, 25>
+    define vpn pos - <0, 0, 0>
+
+    transform
+    {
+      position pos
+      rotation axes(vpn, <0,1,0>)
+    }
+    camera
+    {
+      perspective
+      angle 45
+    }
+  }
+
+  // Iluminação
+  object "Lights"
+  {
+    object
+    {
+      transform
+      {
+        position <10, 15, 10>
+      }
+      light
+      {
+        point
+        color White * 1.5
+        falloff 0
+      }
+    }
+
+    object
+    {
+      transform
+      {
+        position <-10, 15, 10>
+      }
+      light
+      {
+        point
+        color White * 1.2
+        falloff 0
+      }
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, 15, -10>
+      }
+      light
+      {
+        point
+        color rgb(0.8, 0.9, 1.0)
+        falloff 0
+      }
+    }
+  }
+
+  // Caixa de água grande (aquário)
+  object "Aquarium Box"
+  {
+    transform
+    {
+      position <0, 0, 0>
+      scale vec3(10, 8, 10)
+    }
+    mesh "Box" material "Water"
+  }
+
+  // Esferas opacas no fundo
+  object "Opaque Spheres Bottom"
+  {
+    object
+    {
+      transform
+      {
+        position <-3, -3, -3>
+        scale vec3(0.8)
+      }
+      mesh "Sphere" material "RedOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <3, -3, -3>
+        scale vec3(0.8)
+      }
+      mesh "Sphere" material "BlueOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, -3, 3>
+        scale vec3(0.8)
+      }
+      mesh "Sphere" material "GreenOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-3, -3, 3>
+        scale vec3(0.6)
+      }
+      mesh "Sphere" material "WhiteOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <3, -3, 3>
+        scale vec3(0.6)
+      }
+      mesh "Sphere" material "RedOpaque"
+    }
+  }
+
+  // Esferas de vidro flutuando
+  object "Glass Spheres Floating"
+  {
+    object
+    {
+      transform
+      {
+        position <-2, 0, 0>
+        scale vec3(1.2)
+      }
+      mesh "Sphere" material "ClearGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <2, 1, -2>
+        scale vec3(1.0)
+      }
+      mesh "Sphere" material "RedGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, 2, 2>
+        scale vec3(0.9)
+      }
+      mesh "Sphere" material "GreenGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-4, 1.5, 2>
+        scale vec3(0.8)
+      }
+      mesh "Sphere" material "BlueGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <4, 0.5, 0>
+        scale vec3(0.7)
+      }
+      mesh "Sphere" material "AmberGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <1, -1, 1>
+        scale vec3(0.6)
+      }
+      mesh "Sphere" material "Diamond"
+    }
+  }
+
+  // Cubos de vidro empilhados
+  object "Stacked Glass Boxes"
+  {
+    // Base
+    object
+    {
+      transform
+      {
+        position <-5, -2, -5>
+        scale vec3(1.2, 1.2, 1.2)
+      }
+      mesh "Box" material "ClearGlass"
+    }
+
+    // Segundo nível
+    object
+    {
+      transform
+      {
+        position <-5, 0, -5>
+        scale vec3(1.0, 1.0, 1.0)
+      }
+      mesh "Box" material "BlueGlass"
+    }
+
+    // Terceiro nível
+    object
+    {
+      transform
+      {
+        position <-5, 1.8, -5>
+        scale vec3(0.8, 0.8, 0.8)
+      }
+      mesh "Box" material "RedGlass"
+    }
+  }
+
+  // Outro grupo de cubos empilhados
+  object "Stacked Glass Boxes 2"
+  {
+    object
+    {
+      transform
+      {
+        position <5, -2, -5>
+        scale vec3(1.0, 1.0, 1.0)
+      }
+      mesh "Box" material "GreenGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <5, 0, -5>
+        scale vec3(0.9, 0.9, 0.9)
+      }
+      mesh "Box" material "AmberGlass"
+    }
+  }
+
+  // Cubos transparentes espalhados
+  object "Scattered Glass Boxes"
+  {
+    object
+    {
+      transform
+      {
+        position <-1, -1, -1>
+        scale vec3(0.7, 0.7, 0.7)
+        rotation <0, 45, 0>
+      }
+      mesh "Box" material "ClearGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <2, 0, 3>
+        scale vec3(0.8, 0.8, 0.8)
+        rotation <30, 30, 0>
+      }
+      mesh "Box" material "RedGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-3, 1, 1>
+        scale vec3(0.6, 0.6, 0.6)
+        rotation <0, 0, 45>
+      }
+      mesh "Box" material "BlueGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, -0.5, -3>
+        scale vec3(0.5, 0.5, 0.5)
+        rotation <15, 60, 15>
+      }
+      mesh "Box" material "GreenGlass"
+    }
+  }
+
+  // Caixas opacas no fundo (decoração)
+  object "Opaque Boxes Bottom"
+  {
+    object
+    {
+      transform
+      {
+        position <6, -3, 3>
+        scale vec3(0.5, 0.5, 0.5)
+      }
+      mesh "Box" material "RedOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-6, -3, 0>
+        scale vec3(0.6, 0.6, 0.6)
+      }
+      mesh "Box" material "BlueOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, -3.5, -5>
+        scale vec3(0.8, 0.3, 0.8)
+      }
+      mesh "Box" material "GreenOpaque"
+    }
+  }
+
+  // Esferas pequenas formando uma cadeia
+  object "Sphere Chain"
+  {
+    object
+    {
+      transform
+      {
+        position <-6, 2, 0>
+        scale vec3(0.4)
+      }
+      mesh "Sphere" material "ClearGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-6, 1, 0>
+        scale vec3(0.4)
+      }
+      mesh "Sphere" material "RedGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-6, 0, 0>
+        scale vec3(0.4)
+      }
+      mesh "Sphere" material "BlueGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-6, -1, 0>
+        scale vec3(0.4)
+      }
+      mesh "Sphere" material "GreenGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-6, -2, 0>
+        scale vec3(0.4)
+      }
+      mesh "Sphere" material "AmberGlass"
+    }
+  }
+
+  // Parede de fundo ESCURA
+  object "Background Wall"
+  {
+    transform
+    {
+      position <0, 0, -12>
+      scale vec3(25, 20, 0.5)
+    }
+    mesh "Box" material "GrayOpaque"
+  }
+}

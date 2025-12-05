@@ -70,7 +70,7 @@ private:
   int _maxRecursionLevel{6};
   float _minWeight{RayTracer::minMinWeight};
   float _adaptiveThreshold{0.1f};
-  int _maxSubdivLevel{2};
+  int _maxSubdivisionLevel{2};
   bool _useJitter{false};
   float _sceneIOR{1.0f};
 

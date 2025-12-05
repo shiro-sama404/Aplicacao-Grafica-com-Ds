@@ -37,6 +37,8 @@
 #include "graphics/Image.h"
 #include "graphics/PrimitiveBVH.h"
 #include "graphics/Renderer.h"
+#include <vector>
+#include <algorithm>
 
 namespace cg
 { // begin namespace cg
@@ -79,19 +81,19 @@ public:
     return _adaptiveThreshold;
   }
 
-  void setAdaptiveThreshold(float threshold)
+  void setAdaptiveThreshold(float t)
   {
-    _adaptiveThreshold = math::clamp(threshold, 0.0f, 1.0f);
+    _adaptiveThreshold = math::clamp(t, 0.0f, 1.0f);
   }
 
-  auto maxSubdivLevel() const
+  auto maxSubdivisionLevel() const
   {
-    return _maxSubdivLevel;
+    return _maxSubdivisionLevel;
   }
 
-  void setMaxSubdivLevel(uint32_t level)
+  void setMaxSubdivisionLevel(uint32_t l)
   {
-    _maxSubdivLevel = math::min(level, uint32_t(4));
+    _maxSubdivisionLevel = math::min(l, uint32_t(4));
   }
 
   auto useJitter() const
@@ -99,9 +101,9 @@ public:
     return _useJitter;
   }
 
-  void setUseJitter(bool use)
+  void setUseJitter(bool u)
   {
-    _useJitter = use;
+    _useJitter = u;
   }
 
   auto sceneIOR() const
@@ -130,7 +132,7 @@ private:
   float _minWeight;
   uint32_t _maxRecursionLevel;
   float _adaptiveThreshold{0.1f};
-  uint32_t _maxSubdivLevel{2};
+  uint32_t _maxSubdivisionLevel{2};
   bool _useJitter{false};
   float _sceneIOR{1.0f};
   uint64_t _numberOfRays;
@@ -145,14 +147,14 @@ private:
   void setPixelRay(float x, float y);
   Color shoot(float x, float y);
   bool intersect(const Ray3f&, Intersection&);
-  Color trace(const Ray3f& ray, uint32_t level, float weight, float currentIOR = 1.0f);
-  Color shade(const Ray3f&, Intersection&, uint32_t, float, float currentIOR = 1.0f);
+  Color trace(const Ray3f& ray, uint32_t level, float weight, const std::vector<float>& iorStack);
+  Color shade(const Ray3f& ray, Intersection& hit, uint32_t level, float weight, const std::vector<float>& iorStack);
   bool shadow(const Ray3f&);
   Color background() const;
   
-  // Adaptive supersampling
-  Color samplePixel(float x, float y, int level, std::vector<std::vector<Color>>& rayBuffer);
-  Color sampleSubpixel(float x0, float y0, float x1, float y1, int level, std::vector<std::vector<Color>>& rayBuffer);
+  // Antialiasing
+  Color samplePixel(float x, float y, std::vector<std::vector<Color>>& rayBuffer);
+  Color sampleSubpixel(float x0, float y0, float x1, float y1, int level);
 
   vec3f imageToWindow(float x, float y) const
   {

@@ -1,0 +1,477 @@
+include "materials_transparent.inc"
+
+scene
+{
+  environment
+  {
+    background rgb(0.1, 0.1, 0.12)
+    ambient VeryLightGray
+  }
+
+  // Câmera posicionada para ver todas as fileiras
+  object "Main Camera"
+  {
+    define pos <0, 5, 35>
+    define vpn pos - <0, 0, 0>
+
+    transform
+    {
+      position pos
+      rotation axes(vpn, <0,1,0>)
+    }
+    camera
+    {
+      perspective
+      angle 55
+    }
+  }
+
+  // Iluminação forte para destacar os atributos
+  object "Lights"
+  {
+    object
+    {
+      transform
+      {
+        position <15, 15, 15>
+      }
+      light
+      {
+        point
+        color White * 1.5
+        falloff 0
+      }
+    }
+
+    object
+    {
+      transform
+      {
+        position <-15, 15, 15>
+      }
+      light
+      {
+        point
+        color White * 1.5
+        falloff 0
+      }
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, 15, 0>
+      }
+      light
+      {
+        point
+        color White * 1.2
+        falloff 0
+      }
+    }
+  }
+
+  // FILEIRA 1: Boxes variando IOR (y = 6)
+  object "Row 1 - Boxes IOR Variation"
+  {
+    define row_y 6
+
+    object
+    {
+      transform
+      {
+        position <-15, row_y, 0>
+        scale vec3(1.2)
+      }
+      mesh "Box" material "IOR_1_0"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-12, row_y, 0>
+        scale vec3(1.2)
+      }
+      mesh "Box" material "IOR_1_2"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-9, row_y, 0>
+        scale vec3(1.2)
+      }
+      mesh "Box" material "IOR_1_5"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-6, row_y, 0>
+        scale vec3(1.2)
+      }
+      mesh "Box" material "IOR_1_8"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-3, row_y, 0>
+        scale vec3(1.2)
+      }
+      mesh "Box" material "IOR_2_0"
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, row_y, 0>
+        scale vec3(1.2)
+      }
+      mesh "Box" material "IOR_2_4"
+    }
+  }
+
+  // FILEIRA 2: Cylinders variando Transparency (y = 2)
+  object "Row 2 - Cylinders Transparency Variation"
+  {
+    define row_y 2
+    define cyl_scale vec3(0.8, 1.5, 0.8)
+
+    object
+    {
+      transform
+      {
+        position <-15, row_y, 0>
+        scale cyl_scale
+      }
+      mesh "Cylinder" material "Trans_0"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-12, row_y, 0>
+        scale cyl_scale
+      }
+      mesh "Cylinder" material "Trans_25"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-9, row_y, 0>
+        scale cyl_scale
+      }
+      mesh "Cylinder" material "Trans_50"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-6, row_y, 0>
+        scale cyl_scale
+      }
+      mesh "Cylinder" material "Trans_75"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-3, row_y, 0>
+        scale cyl_scale
+      }
+      mesh "Cylinder" material "Trans_90"
+    }
+  }
+
+  // FILEIRA 3: Spheres variando Shine (y = -2)
+  object "Row 3 - Spheres Shine Variation"
+  {
+    define row_y -2
+
+    object
+    {
+      transform
+      {
+        position <-15, row_y, 0>
+        scale vec3(1.0)
+      }
+      mesh "Sphere" material "Shine_10"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-12, row_y, 0>
+        scale vec3(1.0)
+      }
+      mesh "Sphere" material "Shine_30"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-9, row_y, 0>
+        scale vec3(1.0)
+      }
+      mesh "Sphere" material "Shine_60"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-6, row_y, 0>
+        scale vec3(1.0)
+      }
+      mesh "Sphere" material "Shine_90"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-3, row_y, 0>
+        scale vec3(1.0)
+      }
+      mesh "Sphere" material "Shine_120"
+    }
+  }
+
+  // FILEIRA 4: Cones variando materiais de vidro colorido (y = -6)
+  object "Row 4 - Cones Colored Glass"
+  {
+    define row_y -6
+    define cone_scale vec3(0.8, 1.5, 0.8)
+
+    object
+    {
+      transform
+      {
+        position <-15, row_y, 0>
+        scale cone_scale
+      }
+      mesh "Cone" material "ClearGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-12, row_y, 0>
+        scale cone_scale
+      }
+      mesh "Cone" material "RedGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-9, row_y, 0>
+        scale cone_scale
+      }
+      mesh "Cone" material "GreenGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-6, row_y, 0>
+        scale cone_scale
+      }
+      mesh "Cone" material "BlueGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-3, row_y, 0>
+        scale cone_scale
+      }
+      mesh "Cone" material "AmberGlass"
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, row_y, 0>
+        scale cone_scale
+      }
+      mesh "Cone" material "Diamond"
+    }
+  }
+
+  // Objetos de referência opacos no lado direito
+  object "Reference Objects Right"
+  {
+    // Esfera de referência
+    object
+    {
+      transform
+      {
+        position <8, 4, 0>
+        scale vec3(1.5)
+      }
+      mesh "Sphere" material "WhiteOpaque"
+    }
+
+    // Cubo de referência
+    object
+    {
+      transform
+      {
+        position <8, 0, 0>
+        scale vec3(1.3)
+      }
+      mesh "Box" material "RedOpaque"
+    }
+
+    // Cilindro de referência
+    object
+    {
+      transform
+      {
+        position <8, -4, 0>
+        scale vec3(0.8, 1.5, 0.8)
+      }
+      mesh "Cylinder" material "BlueOpaque"
+    }
+  }
+
+  // Plano de fundo ESCURO para contraste
+  object "Background Plane"
+  {
+    transform
+    {
+      position <0, 0, -8>
+      scale vec3(25, 15, 0.5)
+    }
+    mesh "Box" material "GreenOpaque"
+  }
+
+  // Grid de esferas pequenas no fundo para ver refração
+  object "Background Reference Grid"
+  {
+    define grid_z -6
+    define grid_size 0.3
+
+    // Linha superior
+    object
+    {
+      transform
+      {
+        position <-12, 8, grid_z>
+        scale vec3(grid_size)
+      }
+      mesh "Sphere" material "RedOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-8, 8, grid_z>
+        scale vec3(grid_size)
+      }
+      mesh "Sphere" material "WhiteOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-4, 8, grid_z>
+        scale vec3(grid_size)
+      }
+      mesh "Sphere" material "BlueOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, 8, grid_z>
+        scale vec3(grid_size)
+      }
+      mesh "Sphere" material "RedOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <4, 8, grid_z>
+        scale vec3(grid_size)
+      }
+      mesh "Sphere" material "WhiteOpaque"
+    }
+
+    // Linha inferior
+    object
+    {
+      transform
+      {
+        position <-12, -8, grid_z>
+        scale vec3(grid_size)
+      }
+      mesh "Sphere" material "BlueOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-8, -8, grid_z>
+        scale vec3(grid_size)
+      }
+      mesh "Sphere" material "RedOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <-4, -8, grid_z>
+        scale vec3(grid_size)
+      }
+      mesh "Sphere" material "WhiteOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <0, -8, grid_z>
+        scale vec3(grid_size)
+      }
+      mesh "Sphere" material "BlueOpaque"
+    }
+
+    object
+    {
+      transform
+      {
+        position <4, -8, grid_z>
+        scale vec3(grid_size)
+      }
+      mesh "Sphere" material "RedOpaque"
+    }
+  }
+}
