@@ -1,0 +1,120 @@
+include "materials_transparent.inc"
+
+scene "Antialiasing 2"
+{
+  environment
+  {
+    background White
+    ambient VeryLightGray
+  }
+
+  // Câmera frontal
+  object "Main Camera"
+  {
+    define pos <0, 1, 18>
+    define target <0, 1, 0>
+    define vpn pos - target
+
+    transform
+    {
+      position pos
+      rotation axes(vpn, <0,1,0>)
+    }
+    camera
+    {
+      perspective
+      angle 40
+    }
+  }
+
+  // Iluminação
+  object "Lights"
+  {
+    object
+    {
+      transform
+      {
+        position <0, 10, 10>
+      }
+      light
+      {
+        point
+        color White * 1.5
+        falloff 0
+      }
+    }
+
+    object
+    {
+      transform
+      {
+        position <-5, 5, 8>
+      }
+      light
+      {
+        point
+        color White
+        falloff 0
+      }
+    }
+  }
+
+  // Linha diagonal 1 - 15 graus
+  object "Diagonal Line 1"
+  {
+    transform
+    {
+      position <-5, 1, 0>
+      scale vec3(0.1, 5, 0.1)
+      rotation <0, 0, 15>
+    }
+    mesh "Box" material "RedOpaque"
+  }
+
+  // Linha diagonal 2 - 30 graus
+  object "Diagonal Line 2"
+  {
+    transform
+    {
+      position <-2.5, 0.5, 0>
+      scale vec3(0.1, 5, 0.1)
+      rotation <0, 0, 30>
+    }
+    mesh "Box" material "RedOpaque"
+  }
+
+  // Linha diagonal 3 - 45 graus
+  object "Diagonal Line 3"
+  {
+    transform
+    {
+      position <0, -1, 0>
+      scale vec3(0.1, 5, 0.1)
+      rotation <0, 0, 45>
+    }
+    mesh "Box" material "RedOpaque"
+  }
+
+  // Linha diagonal 4 - 60 graus
+  object "Diagonal Line 4"
+  {
+    transform
+    {
+      position <5, -2.5, 0>
+      scale vec3(0.1, 5, 0.1)
+      rotation <0, 0, 60>
+    }
+    mesh "Box" material "RedOpaque"
+  }
+
+  // Plano de fundo branco
+  object "White Background"
+  {
+    transform
+    {
+      position <0, 0, -2>
+      scale vec3(12, 8, 0.1)
+    }
+    mesh "Box" material "WhiteOpaque"
+  }
+}

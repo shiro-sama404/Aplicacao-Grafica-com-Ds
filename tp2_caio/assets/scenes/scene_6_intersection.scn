@@ -1,70 +1,4 @@
-include "colors.inc"
-
-material "Glass"
-{
-  ambient  White * 0.1
-  diffuse  White * 0.1
-  spot     White * 0.5
-  shine    100
-  specular White * 0.2
-  transparency White * 0.9
-  ior 1.5
-}
-
-material "Diamond"
-{
-  ambient  White * 0.1
-  diffuse  White * 0.1
-  spot     White * 0.8
-  shine    150
-  specular White * 0.5
-  transparency White * 0.95
-  ior 2.4
-}
-
-material "Water"
-{
-  ambient  LightBlue * 0.2
-  diffuse  LightBlue * 0.2
-  spot     LightBlue * 0.6
-  shine    90
-  specular White * 0.3
-  transparency LightBlue * 0.8
-  ior 1.33
-}
-
-material "RedGem"
-{
-  ambient  Red * 0.3
-  diffuse  Red * 0.5
-  spot     Red * 0.7
-  shine    120
-  specular Red * 0.4
-  transparency Red * 0.6
-  ior 1.7
-}
-
-material "Base"
-{
-  ambient  Gold * 0.3
-  diffuse  Gold
-  spot     Gold * 0.6
-  shine    100
-  specular Gold * 0.3
-  transparency Black
-  ior 1.0
-}
-
-material "Floor"
-{
-  ambient  Gray * 0.3
-  diffuse  Gray
-  spot     Gray * 0.3
-  shine    50
-  specular Black
-  transparency Black
-  ior 1.0
-}
+include "materials_transparent.inc"
 
 scene
 {
@@ -76,9 +10,9 @@ scene
 
   object "Main Camera"
   {
-    define pos <0, 4, 12>
-    define target <0, 0.5, 0>
-    define vpn target - pos
+    define pos <0, 3, 8>
+    define target <0, 0, 0>
+    define vpn pos - target
     
     transform
     {
@@ -144,7 +78,7 @@ scene
       position <0, -2, 0>
       scale <20, 0.1, 20>
     }
-    mesh "Plane" material "Floor"
+    mesh "Plane" material "GrayOpaque"
   }
 
   object "Base"
@@ -154,7 +88,7 @@ scene
       position <0, -1, 0>
       scale <2, 0.3, 2>
     }
-    mesh "Box" material "Base"
+    mesh "Box" material "ClearGlass"
   }
 
   object "Outer Glass Sphere"
@@ -164,7 +98,7 @@ scene
       position <0, 0.5, 0>
       scale vec3(2.5)
     }
-    mesh "Sphere" material "Glass"
+    mesh "Sphere" material "AmberGlass"
   }
 
   object "Water Sphere"
@@ -194,7 +128,7 @@ scene
       position <3, 1, 0>
       scale vec3(0.6)
     }
-    mesh "Sphere" material "RedGem"
+    mesh "Sphere" material "RedGlass"
   }
 
   object "Red Gem 2"
@@ -204,7 +138,7 @@ scene
       position <-3, 1, 0>
       scale vec3(0.6)
     }
-    mesh "Sphere" material "RedGem"
+    mesh "Sphere" material "RedGlass"
   }
 
   object "Red Gem 3"
@@ -214,7 +148,7 @@ scene
       position <0, 1, 3>
       scale vec3(0.6)
     }
-    mesh "Sphere" material "RedGem"
+    mesh "Sphere" material "RedGlass"
   }
 
   object "Red Gem 4"
@@ -224,7 +158,7 @@ scene
       position <0, 1, -3>
       scale vec3(0.6)
     }
-    mesh "Sphere" material "RedGem"
+    mesh "Sphere" material "RedGlass"
   }
 }
 

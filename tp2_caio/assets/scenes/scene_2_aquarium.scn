@@ -1,6 +1,6 @@
 include "materials_transparent.inc"
 
-scene
+scene "Aquarium"
 {
   environment
   {
@@ -11,7 +11,7 @@ scene
   // Câmera
   object "Main Camera"
   {
-    define pos <15, 8, 25>
+    define pos <9, 0, 30>
     define vpn pos - <0, 0, 0>
 
     transform

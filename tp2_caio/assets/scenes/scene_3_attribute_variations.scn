@@ -1,6 +1,6 @@
 include "materials_transparent.inc"
 
-scene
+scene "Attribute Variations"
 {
   environment
   {
@@ -11,8 +11,9 @@ scene
   // Câmera posicionada para ver todas as fileiras
   object "Main Camera"
   {
-    define pos <0, 5, 35>
-    define vpn pos - <0, 0, 0>
+    define pos <-6, 1, 16>
+    define target <-4.6, 1, 0>
+    define vpn pos - target
 
     transform
     {
@@ -363,115 +364,6 @@ scene
       position <0, 0, -8>
       scale vec3(25, 15, 0.5)
     }
-    mesh "Box" material "GreenOpaque"
-  }
-
-  // Grid de esferas pequenas no fundo para ver refração
-  object "Background Reference Grid"
-  {
-    define grid_z -6
-    define grid_size 0.3
-
-    // Linha superior
-    object
-    {
-      transform
-      {
-        position <-12, 8, grid_z>
-        scale vec3(grid_size)
-      }
-      mesh "Sphere" material "RedOpaque"
-    }
-
-    object
-    {
-      transform
-      {
-        position <-8, 8, grid_z>
-        scale vec3(grid_size)
-      }
-      mesh "Sphere" material "WhiteOpaque"
-    }
-
-    object
-    {
-      transform
-      {
-        position <-4, 8, grid_z>
-        scale vec3(grid_size)
-      }
-      mesh "Sphere" material "BlueOpaque"
-    }
-
-    object
-    {
-      transform
-      {
-        position <0, 8, grid_z>
-        scale vec3(grid_size)
-      }
-      mesh "Sphere" material "RedOpaque"
-    }
-
-    object
-    {
-      transform
-      {
-        position <4, 8, grid_z>
-        scale vec3(grid_size)
-      }
-      mesh "Sphere" material "WhiteOpaque"
-    }
-
-    // Linha inferior
-    object
-    {
-      transform
-      {
-        position <-12, -8, grid_z>
-        scale vec3(grid_size)
-      }
-      mesh "Sphere" material "BlueOpaque"
-    }
-
-    object
-    {
-      transform
-      {
-        position <-8, -8, grid_z>
-        scale vec3(grid_size)
-      }
-      mesh "Sphere" material "RedOpaque"
-    }
-
-    object
-    {
-      transform
-      {
-        position <-4, -8, grid_z>
-        scale vec3(grid_size)
-      }
-      mesh "Sphere" material "WhiteOpaque"
-    }
-
-    object
-    {
-      transform
-      {
-        position <0, -8, grid_z>
-        scale vec3(grid_size)
-      }
-      mesh "Sphere" material "BlueOpaque"
-    }
-
-    object
-    {
-      transform
-      {
-        position <4, -8, grid_z>
-        scale vec3(grid_size)
-      }
-      mesh "Sphere" material "RedOpaque"
-    }
+    mesh "Box" material "GrayOpaque"
   }
 }

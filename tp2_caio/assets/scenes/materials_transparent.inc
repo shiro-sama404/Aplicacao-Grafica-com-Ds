@@ -14,8 +14,8 @@ material "WhiteOpaque"
 
 material "GrayOpaque"
 {
-  ambient  Gray
-  diffuse  Gray
+  ambient  DarkGray
+  diffuse  DarkGray
   spot     White
   shine    80
   specular White * 0.2
