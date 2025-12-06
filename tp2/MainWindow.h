@@ -58,7 +58,7 @@ class MainWindow final: public SceneWindow
 {
 public:
   MainWindow(int width, int height):
-    SceneWindow{"TP2 - Ray Tracer Extensions", width, height}
+    SceneWindow{"Ds Demo Version 1.4", width, height}
   {
     // do nothing
   }
@@ -69,9 +69,10 @@ private:
   Reference<GLImage> _image;
   int _maxRecursionLevel{6};
   float _minWeight{RayTracer::minMinWeight};
-  float _adaptiveDistance{0.1f};
+  float _adaptiveThreshold{0.1f};
   int _maxSubdivisionLevel{2};
-  bool _supersamplingEnabled{false};
+  bool _useJitter{false};
+  float _sceneIOR{1.0f};
 
   static MeshMap _defaultMeshes;
 

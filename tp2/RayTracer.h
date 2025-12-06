@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -37,7 +37,8 @@
 #include "graphics/Image.h"
 #include "graphics/PrimitiveBVH.h"
 #include "graphics/Renderer.h"
-#include <unordered_map>
+#include <vector>
+#include <algorithm>
 
 namespace cg
 { // begin namespace cg
@@ -75,34 +76,44 @@ public:
     _maxRecursionLevel = math::min(rl, maxMaxRecursionLevel);
   }
 
-  auto adaptiveDistance() const
+  auto adaptiveThreshold() const
   {
-    return _supersamplingParams.adaptiveDistance;
+    return _adaptiveThreshold;
   }
 
-  void setAdaptiveDistance(float d)
+  void setAdaptiveThreshold(float t)
   {
-    _supersamplingParams.adaptiveDistance = math::max(0.0f, math::min(1.0f, d));
+    _adaptiveThreshold = math::clamp(t, 0.0f, 1.0f);
   }
 
   auto maxSubdivisionLevel() const
   {
-    return _supersamplingParams.maxSubdivisionLevel;
+    return _maxSubdivisionLevel;
   }
 
-  void setMaxSubdivisionLevel(uint32_t level)
+  void setMaxSubdivisionLevel(uint32_t l)
   {
-    _supersamplingParams.maxSubdivisionLevel = math::min(level, uint32_t(4));
+    _maxSubdivisionLevel = math::min(l, uint32_t(4));
   }
 
-  auto supersamplingEnabled() const
+  auto useJitter() const
   {
-    return _supersamplingParams.enabled;
+    return _useJitter;
   }
 
-  void setSupersamplingEnabled(bool enabled)
+  void setUseJitter(bool u)
   {
-    _supersamplingParams.enabled = enabled;
+    _useJitter = u;
+  }
+
+  auto sceneIOR() const
+  {
+    return _sceneIOR;
+  }
+
+  void setSceneIOR(float ior)
+  {
+    _sceneIOR = math::max(ior, 1.0f);
   }
 
   void update() override;
@@ -120,6 +131,10 @@ private:
   } _vrc;
   float _minWeight;
   uint32_t _maxRecursionLevel;
+  float _adaptiveThreshold{0.1f};
+  uint32_t _maxSubdivisionLevel{2};
+  bool _useJitter{false};
+  float _sceneIOR{1.0f};
   uint64_t _numberOfRays;
   uint64_t _numberOfHits;
   Ray3f _pixelRay;
@@ -128,37 +143,30 @@ private:
   float _Ih;
   float _Iw;
 
+  // Adaptive Supersampling Structures
+  static constexpr int MAX_SUB_LEVEL = 4;
+  static constexpr int MAX_STEPS_CAP = 1 << MAX_SUB_LEVEL; // 16
+  static constexpr int WINDOW_DIM = MAX_STEPS_CAP + 1; // 17
+
+  struct GridPoint
+  {
+    Color color;
+    bool cooked; // true if ray has been traced
+  };
+
+  std::vector<GridPoint> _lineBuffer;
+  GridPoint _window[WINDOW_DIM][WINDOW_DIM];
+
   void scan(Image& image);
   void setPixelRay(float x, float y);
   Color shoot(float x, float y);
   bool intersect(const Ray3f&, Intersection&);
-  Color trace(const Ray3f& ray, uint32_t level, float weight, float currentIOR = 1.0f);
-  Color shade(const Ray3f&, Intersection&, uint32_t, float, float currentIOR = 1.0f);
+  Color trace(const Ray3f& ray, uint32_t level, float weight, const std::vector<float>& iorStack);
+  Color shade(const Ray3f& ray, Intersection& hit, uint32_t level, float weight, const std::vector<float>& iorStack);
   bool shadow(const Ray3f&);
   Color background() const;
-
-  // Adaptive supersampling
-  struct SupersamplingParams
-  {
-    float adaptiveDistance{0.1f};
-    uint32_t maxSubdivisionLevel{2};
-    bool enabled{false};
-  } _supersamplingParams;
-
-  Color adaptiveSupersample(float x0, float y0, float x1, float y1, uint32_t level);
-  Color getRayColor(float x, float y, bool useJitter = false, float subpixelSize = 1.0f);
   
-  // Buffer for storing ray colors to avoid recomputation
-  std::unordered_map<uint64_t, Color> _rayColorCache;
-  
-  inline uint64_t hashRayPosition(float x, float y) const
-  {
-    // Hash function for ray position (quantize to pixel corners for sharing)
-    // Quantize to 0.1 precision for corner sharing
-    int qx = static_cast<int>(x * 10.0f + 0.5f);
-    int qy = static_cast<int>(y * 10.0f + 0.5f);
-    return (static_cast<uint64_t>(qx) << 32) | static_cast<uint32_t>(qy);
-  }
+  Color adapt(int i, int j, int step, float x, float y);
 
   vec3f imageToWindow(float x, float y) const
   {

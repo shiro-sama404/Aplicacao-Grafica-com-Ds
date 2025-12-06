@@ -152,6 +152,10 @@ MainWindow::readScene(const std::string& filename) try
 
     for (const auto& [name, m] : reader.materials)
       materials[name] = m;
+    
+    // Clear rendered image to force re-render with new scene
+    _image = nullptr;
+    _rayTracer = nullptr;
   }
 }
 catch (const std::exception& e)
@@ -269,20 +273,24 @@ MainWindow::mainMenu()
         RayTracer::minMinWeight,
         1.0f);
       ImGui::Separator();
-      ImGui::Checkbox("Adaptive Supersampling", &_supersamplingEnabled);
-      if (_supersamplingEnabled)
-      {
-        ImGui::DragFloat("Adaptive Distance",
-          &_adaptiveDistance,
-          0.01f,
-          0.0f,
-          1.0f);
-        ImGui::DragInt("Max Subdivision Level",
-          &_maxSubdivisionLevel,
-          1.0f,
-          0,
-          4);
-      }
+      ImGui::Text("Antialiasing:");
+      ImGui::DragFloat("Adaptive Threshold",
+        &_adaptiveThreshold,
+        0.01f,
+        0.0f,
+        1.0f);
+      ImGui::DragInt("Max Subdivisionv Level",
+        &_maxSubdivisionLevel,
+        1.0f,
+        0,
+        4);
+      ImGui::Checkbox("Use Jitter", &_useJitter);
+      ImGui::Separator();
+      ImGui::DragFloat("Scene IOR",
+        &_sceneIOR,
+        0.01f,
+        1.0f,
+        5.0f);
       ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Tools"))
@@ -356,9 +364,10 @@ MainWindow::renderScene()
       _rayTracer->setCamera(*camera);
     _rayTracer->setMaxRecursionLevel(_maxRecursionLevel);
     _rayTracer->setMinWeight(_minWeight);
-    _rayTracer->setAdaptiveDistance(_adaptiveDistance);
+    _rayTracer->setAdaptiveThreshold(_adaptiveThreshold);
     _rayTracer->setMaxSubdivisionLevel(_maxSubdivisionLevel);
-    _rayTracer->setSupersamplingEnabled(_supersamplingEnabled);
+    _rayTracer->setUseJitter(_useJitter);
+    _rayTracer->setSceneIOR(_sceneIOR);
     _rayTracer->renderImage(*_image);
   }
   _image->draw(0, 0);

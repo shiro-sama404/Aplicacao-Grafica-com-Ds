@@ -36,6 +36,6 @@
 int
 main(int argc, char** argv)
 {
-  puts("Trabalho Prático 2 - Ray Tracer Extensions\n");
+  puts("Ds Demo Version 1.4 by Paulo Pagliosa (ppagliosa@gmail.com)\n");
   return cg::Application{new MainWindow{1280, 720}}.run(argc, argv);
 }
