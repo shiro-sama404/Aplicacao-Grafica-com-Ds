@@ -1,6 +1,6 @@
 //[]---------------------------------------------------------------[]
 //|                                                                 |
-//| Copyright (C) 2018, 2022 Paulo Pagliosa.                        |
+//| Copyright (C) 2018, 2023 Paulo Pagliosa.                        |
 //|                                                                 |
 //| This software is provided 'as-is', without any express or       |
 //| implied warranty. In no event will the authors be held liable   |
@@ -143,6 +143,20 @@ private:
   float _Ih;
   float _Iw;
 
+  // Adaptive Supersampling Structures
+  static constexpr int MAX_SUB_LEVEL = 4;
+  static constexpr int MAX_STEPS_CAP = 1 << MAX_SUB_LEVEL; // 16
+  static constexpr int WINDOW_DIM = MAX_STEPS_CAP + 1; // 17
+
+  struct GridPoint
+  {
+    Color color;
+    bool cooked; // true if ray has been traced
+  };
+
+  std::vector<GridPoint> _lineBuffer;
+  GridPoint _window[WINDOW_DIM][WINDOW_DIM];
+
   void scan(Image& image);
   void setPixelRay(float x, float y);
   Color shoot(float x, float y);
@@ -152,9 +166,7 @@ private:
   bool shadow(const Ray3f&);
   Color background() const;
   
-  // Antialiasing
-  Color samplePixel(float x, float y, std::vector<std::vector<Color>>& rayBuffer);
-  Color sampleSubpixel(float x0, float y0, float x1, float y1, int level);
+  Color adapt(int i, int j, int step, float x, float y);
 
   vec3f imageToWindow(float x, float y) const
   {
